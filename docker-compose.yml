@@ -1,0 +1,24 @@
+services:
+  odoo-mcp:
+    build:
+      context: ./rust-mcp
+      dockerfile: Dockerfile
+    ports:
+      - "8787:8787"
+    env_file:
+      - .env
+    environment:
+      # IMPORTANT:
+      # - If Odoo runs on your HOST at localhost:8069, containers must use host.docker.internal:8069 (Mac/Windows).
+      # - On Linux, we add extra_hosts below so host.docker.internal resolves to the host gateway.
+      ODOO_URL: "http://host.docker.internal:8069"
+      ODOO_DB: "v19_pos"
+      ODOO_API_KEY: "${ODOO_API_KEY}"
+      # Optional:
+      # ODOO_ENABLE_CLEANUP_TOOLS: "true"
+      # ODOO_TIMEOUT_MS: "30000"
+      # ODOO_MAX_RETRIES: "2"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+

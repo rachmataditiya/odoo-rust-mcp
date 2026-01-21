@@ -84,6 +84,14 @@ cd rust-mcp
 ./target/release/rust-mcp --transport ws --listen 127.0.0.1:8787
 ```
 
+### Run with Docker Compose (.env)
+
+Create `.env` in the repo root (example in `dotenv.example`), then:
+
+```bash
+docker compose up --build
+```
+
 ### Cleanup tools (disabled by default)
 
 Cleanup tools are only listed and callable when enabled:

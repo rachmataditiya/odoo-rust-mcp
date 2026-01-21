@@ -1,0 +1,12 @@
+## Copy to .env (do not commit .env)
+#
+# Odoo connection (host machine)
+ODOO_URL=http://host.docker.internal:8069
+ODOO_DB=v19_pos
+ODOO_API_KEY=YOUR_API_KEY
+#
+# Optional
+# ODOO_ENABLE_CLEANUP_TOOLS=true
+# ODOO_TIMEOUT_MS=30000
+# ODOO_MAX_RETRIES=2
+
