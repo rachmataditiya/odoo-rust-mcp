@@ -118,6 +118,13 @@ Cleanup tools (feature-flag):
 
 ### Example tool calls
 
+### Tool result format (important)
+
+Most tools return an MCP response whose `content[0].text` is a **JSON string**.
+
+- In the examples below, **Request** shows what you pass as tool arguments.
+- **Decoded result** shows the JSON payload after you parse `content[0].text`.
+
 Search and read:
 
 ```json
@@ -131,6 +138,15 @@ Search and read:
 }
 ```
 
+Decoded result (shape):
+
+```json
+{
+  "records": [],
+  "count": 0
+}
+```
+
 Read by ids:
 
 ```json
@@ -139,6 +155,14 @@ Read by ids:
   "model": "res.partner",
   "ids": [1, 2, 3],
   "fields": ["id", "name", "email"]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "records": []
 }
 ```
 
@@ -155,6 +179,15 @@ Create:
 }
 ```
 
+Decoded result (shape):
+
+```json
+{
+  "id": 123,
+  "success": true
+}
+```
+
 Update:
 
 ```json
@@ -165,6 +198,73 @@ Update:
   "values": {
     "email": "demo@acme.test"
   }
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "success": true,
+  "updated_count": 1
+}
+```
+
+Delete:
+
+```json
+{
+  "instance": "default",
+  "model": "res.partner",
+  "ids": [123]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "success": true,
+  "deleted_count": 1
+}
+```
+
+Search (IDs only):
+
+```json
+{
+  "instance": "default",
+  "model": "res.partner",
+  "domain": [["is_company", "=", true]],
+  "limit": 10,
+  "order": "name ASC"
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "ids": [1, 2, 3],
+  "count": 3
+}
+```
+
+Count:
+
+```json
+{
+  "instance": "default",
+  "model": "res.partner",
+  "domain": [["id", ">", 0]]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "count": 18
 }
 ```
 
@@ -179,12 +279,72 @@ Execute action/button (workflow):
 }
 ```
 
+Decoded result (shape):
+
+```json
+{
+  "result": null,
+  "executed_on": [42]
+}
+```
+
+Execute arbitrary method:
+
+```json
+{
+  "instance": "default",
+  "model": "res.partner",
+  "method": "name_get",
+  "args": [[1, 2, 3]]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "result": []
+}
+```
+
 Model metadata (fields/types):
 
 ```json
 {
   "instance": "default",
   "model": "sale.order"
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "model": {
+    "name": "sale.order",
+    "description": "Sales Order",
+    "fields": {}
+  }
+}
+```
+
+Generate report (PDF as base64):
+
+```json
+{
+  "instance": "default",
+  "reportName": "sale.report_saleorder",
+  "ids": [42]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "pdf_base64": "JVBERi0xLjQKJ...<omitted>...",
+  "report_name": "sale.report_saleorder",
+  "record_ids": [42]
 }
 ```
 
@@ -223,6 +383,27 @@ cargo run --release --bin ws_smoke_client -- \
   --url ws://127.0.0.1:8787 \
   --instance default \
   --model res.partner
+```
+
+Example output (local run against `res.partner`):
+
+```text
+tools/list: 11 tools
+- odoo_search
+- odoo_search_read
+- odoo_read
+- odoo_create
+- odoo_update
+- odoo_delete
+- odoo_execute
+- odoo_count
+- odoo_workflow_action
+- odoo_generate_report
+- odoo_get_model_metadata
+odoo_count result: {"count":18}
+odoo_search_read count: 2
+odoo_search_read sample records: [{"id":46,"name":"Kasir C"},{"id":45,"name":"Kasir B"}]
+prompts/list: odoo_common_models, odoo_domain_filters
 ```
 
 ### Security
