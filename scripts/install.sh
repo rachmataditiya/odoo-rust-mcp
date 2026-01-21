@@ -3,8 +3,8 @@ set -e
 
 # Odoo Rust MCP Server Installer
 # Installs to /usr/local/bin (binary) and /usr/local/share/odoo-rust-mcp (config)
+# Run from extracted release directory: ./install.sh
 
-REPO="rachmataditiya/odoo-rust-mcp"
 BINARY_NAME="rust-mcp"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/usr/local/share/odoo-rust-mcp"
@@ -19,79 +19,31 @@ info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-# Detect OS and architecture
-detect_platform() {
-    local os arch
+# Get script directory (where the release was extracted)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    case "$(uname -s)" in
-        Linux*)  os="linux" ;;
-        Darwin*) os="darwin" ;;
-        *)       error "Unsupported OS: $(uname -s)" ;;
-    esac
-
-    case "$(uname -m)" in
-        x86_64|amd64)  arch="x86_64" ;;
-        arm64|aarch64) arch="aarch64" ;;
-        *)             error "Unsupported architecture: $(uname -m)" ;;
-    esac
-
-    # Linux ARM64 not available yet
-    if [ "$os" = "linux" ] && [ "$arch" = "aarch64" ]; then
-        error "Linux ARM64 builds are not available yet. Please build from source."
-    fi
-
-    if [ "$os" = "linux" ]; then
-        echo "${arch}-unknown-linux-gnu"
-    else
-        echo "${arch}-apple-darwin"
-    fi
-}
-
-# Get latest release version
-get_latest_version() {
-    curl -sL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'
-}
-
-# Download and install
+# Install from local extracted release
 install() {
-    local platform version download_url tmp_dir
+    info "Installing odoo-rust-mcp..."
 
-    info "Detecting platform..."
-    platform=$(detect_platform)
-    info "Platform: $platform"
-
-    info "Fetching latest release..."
-    version=$(get_latest_version)
-    if [ -z "$version" ]; then
-        error "Could not determine latest version"
+    # Check if binary exists in current directory
+    if [ ! -f "$SCRIPT_DIR/$BINARY_NAME" ]; then
+        error "Binary '$BINARY_NAME' not found in $SCRIPT_DIR. Make sure you're running from the extracted release directory."
     fi
-    info "Version: $version"
-
-    download_url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}-${platform}.tar.gz"
-    info "Download URL: $download_url"
-
-    tmp_dir=$(mktemp -d)
-    trap "rm -rf $tmp_dir" EXIT
-
-    info "Downloading..."
-    curl -sL "$download_url" -o "$tmp_dir/release.tar.gz" || error "Download failed"
-
-    info "Extracting..."
-    tar -xzf "$tmp_dir/release.tar.gz" -C "$tmp_dir" || error "Extraction failed"
 
     info "Installing binary to $INSTALL_DIR..."
     sudo mkdir -p "$INSTALL_DIR"
-    sudo cp "$tmp_dir/$BINARY_NAME" "$INSTALL_DIR/" || error "Failed to copy binary"
+    sudo cp "$SCRIPT_DIR/$BINARY_NAME" "$INSTALL_DIR/" || error "Failed to copy binary"
     sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
 
     info "Installing config files to $CONFIG_DIR..."
     sudo mkdir -p "$CONFIG_DIR"
-    if [ -d "$tmp_dir/config" ]; then
-        sudo cp -r "$tmp_dir/config/"* "$CONFIG_DIR/" || warn "Failed to copy config files"
+    if [ -d "$SCRIPT_DIR/config" ]; then
+        sudo cp -r "$SCRIPT_DIR/config/"* "$CONFIG_DIR/" || warn "Failed to copy config files"
     fi
 
-    if [ -f "$tmp_dir/.env.example" ]; then
-        sudo cp "$tmp_dir/.env.example" "$CONFIG_DIR/" || warn "Failed to copy .env.example"
+    if [ -f "$SCRIPT_DIR/.env.example" ]; then
+        sudo cp "$SCRIPT_DIR/.env.example" "$CONFIG_DIR/" || warn "Failed to copy .env.example"
     fi
 
     info "Installation complete!"

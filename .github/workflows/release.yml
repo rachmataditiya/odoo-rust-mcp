@@ -67,6 +67,8 @@ jobs:
           cp README.md release/
           cp LICENSE release/ 2>/dev/null || echo "No LICENSE file"
           cp dotenv.example release/.env.example
+          cp scripts/install.sh release/
+          chmod +x release/install.sh
           cd release
           tar -czvf ../${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }} .
 
@@ -80,6 +82,7 @@ jobs:
           Copy-Item README.md -Destination release/
           Copy-Item LICENSE -Destination release/ -ErrorAction SilentlyContinue
           Copy-Item dotenv.example -Destination release/.env.example
+          Copy-Item scripts/install.ps1 -Destination release/
           Compress-Archive -Path release/* -DestinationPath "${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}"
 
       - name: Upload artifact

@@ -147,38 +147,7 @@ Seed defaults (used only when files are missing):
 
 ### Installation
 
-#### Option 1: One-line installer (recommended)
-
-**Linux / macOS:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/rachmataditiya/odoo-rust-mcp/main/scripts/install.sh | bash
-```
-
-This installs:
-- Binary to `/usr/local/bin/rust-mcp`
-- Config files to `/usr/local/share/odoo-rust-mcp/`
-
-To uninstall:
-```bash
-curl -fsSL https://raw.githubusercontent.com/rachmataditiya/odoo-rust-mcp/main/scripts/install.sh | bash -s uninstall
-```
-
-**Windows (PowerShell as Administrator):**
-```powershell
-irm https://raw.githubusercontent.com/rachmataditiya/odoo-rust-mcp/main/scripts/install.ps1 | iex
-```
-
-This installs:
-- Binary to `C:\Program Files\odoo-rust-mcp\`
-- Config files to `C:\ProgramData\odoo-rust-mcp\`
-- Adds binary to system PATH
-
-To uninstall:
-```powershell
-irm https://raw.githubusercontent.com/rachmataditiya/odoo-rust-mcp/main/scripts/install.ps1 -OutFile install.ps1; .\install.ps1 -Uninstall
-```
-
-#### Option 2: Manual download
+#### Option 1: Download and install (recommended)
 
 Download the latest release for your platform from [GitHub Releases](https://github.com/rachmataditiya/odoo-rust-mcp/releases):
 
@@ -189,15 +158,48 @@ Download the latest release for your platform from [GitHub Releases](https://git
 | macOS ARM64 (Apple Silicon) | `rust-mcp-aarch64-apple-darwin.tar.gz` |
 | Windows x86_64 | `rust-mcp-x86_64-pc-windows-msvc.zip` |
 
-Extract and run:
+Extract and install:
 
+**Linux / macOS:**
 ```bash
-# Linux/macOS
 tar -xzf rust-mcp-<platform>.tar.gz
-chmod +x rust-mcp
+cd rust-mcp-<platform>
+./install.sh
+```
+
+This installs:
+- Binary to `/usr/local/bin/rust-mcp`
+- Config files to `/usr/local/share/odoo-rust-mcp/`
+
+To uninstall:
+```bash
+./install.sh uninstall
+```
+
+**Windows (PowerShell as Administrator):**
+```powershell
+Expand-Archive rust-mcp-x86_64-pc-windows-msvc.zip -DestinationPath rust-mcp
+cd rust-mcp
+.\install.ps1
+```
+
+This installs:
+- Binary to `C:\Program Files\odoo-rust-mcp\`
+- Config files to `C:\ProgramData\odoo-rust-mcp\`
+- Adds binary to system PATH
+
+To uninstall:
+```powershell
+.\install.ps1 -Uninstall
+```
+
+**Manual (without installer):**
+```bash
+# Linux/macOS - just run directly
+tar -xzf rust-mcp-<platform>.tar.gz
 ./rust-mcp --transport stdio
 
-# Windows (PowerShell)
+# Windows
 Expand-Archive rust-mcp-x86_64-pc-windows-msvc.zip -DestinationPath .
 .\rust-mcp.exe --transport stdio
 ```
@@ -206,8 +208,9 @@ The release archive includes:
 - `rust-mcp` (or `rust-mcp.exe` on Windows) - the binary
 - `config/` - default configuration files (tools.json, prompts.json, server.json)
 - `.env.example` - example environment variables
+- `install.sh` (Linux/macOS) or `install.ps1` (Windows) - installer script
 
-#### Option 3: Build from source
+#### Option 2: Build from source
 
 ```bash
 cd rust-mcp
