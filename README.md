@@ -456,6 +456,7 @@ Decoded result (shape):
 
 Set your MCP server command to the built binary:
 
+**Odoo 19+ (API Key):**
 ```json
 {
   "mcpServers": {
@@ -470,6 +471,21 @@ Set your MCP server command to the built binary:
 }
 ```
 
+**Odoo < 19 (Username/Password):**
+```json
+{
+  "mcpServers": {
+    "odoo-rust": {
+      "command": "/absolute/path/to/odoo-rust-mcp/rust-mcp/target/release/rust-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "ODOO_INSTANCES": "{\"legacy\":{\"url\":\"https://mycompany.example.com\",\"db\":\"mycompany\",\"version\":\"18\",\"username\":\"admin\",\"password\":\"your_password\"}}"
+      }
+    }
+  }
+}
+```
+
 ### Cursor config example
 
 Cursor supports `stdio`, `SSE`, and `Streamable HTTP` transports. See Cursor docs: [`cursor.com/docs/context/mcp`](https://cursor.com/docs/context/mcp).
@@ -478,6 +494,7 @@ Cursor supports `stdio`, `SSE`, and `Streamable HTTP` transports. See Cursor doc
 
 Put this in `~/.cursor/mcp.json` (or `${workspaceFolder}/.cursor/mcp.json`):
 
+**Using .env file (recommended):**
 ```json
 {
   "mcpServers": {
@@ -486,6 +503,44 @@ Put this in `~/.cursor/mcp.json` (or `${workspaceFolder}/.cursor/mcp.json`):
       "command": "/absolute/path/to/odoo-rust-mcp/rust-mcp/target/release/rust-mcp",
       "args": ["--transport", "stdio"],
       "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}
+```
+
+**Odoo 19+ inline env:**
+```json
+{
+  "mcpServers": {
+    "odoo-rust-mcp": {
+      "type": "stdio",
+      "command": "/absolute/path/to/odoo-rust-mcp/rust-mcp/target/release/rust-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "ODOO_URL": "http://localhost:8069",
+        "ODOO_DB": "mydb",
+        "ODOO_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+**Odoo < 19 inline env:**
+```json
+{
+  "mcpServers": {
+    "odoo-rust-mcp": {
+      "type": "stdio",
+      "command": "/absolute/path/to/odoo-rust-mcp/rust-mcp/target/release/rust-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "ODOO_URL": "http://localhost:8069",
+        "ODOO_DB": "mydb",
+        "ODOO_VERSION": "18",
+        "ODOO_USERNAME": "admin",
+        "ODOO_PASSWORD": "admin"
+      }
     }
   }
 }
