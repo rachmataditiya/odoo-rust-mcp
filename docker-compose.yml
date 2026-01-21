@@ -5,6 +5,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8787:8787"
+    # Mount JSON configs so they always exist and can be edited without rebuilding.
+    # Use :rw so the server can rewrite defaults if needed.
+    volumes:
+      - ./rust-mcp/tools.json:/config/tools.json:rw
+      - ./rust-mcp/prompts.json:/config/prompts.json:rw
+      - ./rust-mcp/server.json:/config/server.json:rw
     env_file:
       - .env
     environment:
@@ -14,6 +20,10 @@ services:
       ODOO_URL: "http://host.docker.internal:8069"
       ODOO_DB: "v19_pos"
       ODOO_API_KEY: "${ODOO_API_KEY}"
+      # MCP JSON config paths (inside container)
+      MCP_TOOLS_JSON: "/config/tools.json"
+      MCP_PROMPTS_JSON: "/config/prompts.json"
+      MCP_SERVER_JSON: "/config/server.json"
       # Optional:
       # ODOO_ENABLE_CLEANUP_TOOLS: "true"
       # ODOO_TIMEOUT_MS: "30000"
