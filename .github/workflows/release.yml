@@ -50,10 +50,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-action@stable
-
-      - name: Add target
-        run: rustup target add ${{ matrix.target }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools (Linux ARM64)
         if: matrix.cross
