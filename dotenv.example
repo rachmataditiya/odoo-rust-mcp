@@ -27,11 +27,17 @@ ODOO_PASSWORD=admin
 # ODOO_MAX_RETRIES=2
 #
 # =============================================================================
-# MCP tool/prompt config (optional)
+# MCP tool/prompt config (IMPORTANT for stdio transport)
 # =============================================================================
-# - Recommended: edit the files under rust-mcp/config/ (runtime config).
-# - If unset: server looks for ./config/tools.json, ./config/prompts.json, ./config/server.json relative to current working directory.
-# - If set: point to custom paths (absolute or relative).
+# When using stdio transport (e.g., Cursor), the binary runs from a different
+# working directory, so you MUST use absolute paths for config files.
+#
+# Example (adjust path to your installation):
+# MCP_TOOLS_JSON=/Users/yourname/path/to/odoo-rust-mcp/rust-mcp/config/tools.json
+# MCP_PROMPTS_JSON=/Users/yourname/path/to/odoo-rust-mcp/rust-mcp/config/prompts.json
+# MCP_SERVER_JSON=/Users/yourname/path/to/odoo-rust-mcp/rust-mcp/config/server.json
+#
+# For HTTP/WS transport or Docker, relative paths work fine:
 # MCP_TOOLS_JSON=config/tools.json
 # MCP_PROMPTS_JSON=config/prompts.json
 # MCP_SERVER_JSON=config/server.json
