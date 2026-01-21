@@ -87,8 +87,8 @@ impl ServerCompat {
                 let result = json!({
                     "protocolVersion": protocol_version,
                     "capabilities": {
-                        "tools": {},
-                        "prompts": {},
+                        "tools": { "listChanged": true },
+                        "prompts": { "listChanged": true },
                         "resources": {},
                         "experimental": {
                             "odooInstances": { "available": odoo_instances }
@@ -114,7 +114,13 @@ impl ServerCompat {
                 Ok(Response::success(request.id, None))
             }
             _ => {
-                if !initialized {
+                // Allow tools/list and prompts/list without initialized notification
+                // Some clients (like Cursor) may not send initialized before listing
+                let allow_without_init = matches!(
+                    request.method.as_str(),
+                    "tools/list" | "prompts/list" | "resources/list"
+                );
+                if !initialized && !allow_without_init {
                     return Err(Error::protocol(
                         ErrorCode::ServerNotInitialized,
                         "Server not initialized",

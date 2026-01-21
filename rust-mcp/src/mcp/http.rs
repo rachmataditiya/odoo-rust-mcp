@@ -86,8 +86,8 @@ fn cursor_initialize_result(
     Ok(json!({
         "protocolVersion": protocol_version,
         "capabilities": {
-            "tools": {},
-            "prompts": {},
+            "tools": { "listChanged": true },
+            "prompts": { "listChanged": true },
             "resources": {},
             "experimental": {
                 "odooInstances": { "available": odoo_instances }
