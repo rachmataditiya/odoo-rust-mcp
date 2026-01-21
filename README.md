@@ -288,6 +288,33 @@ Endpoints:
 - Streamable HTTP: `http://127.0.0.1:8787/mcp`
 - Legacy SSE: `http://127.0.0.1:8787/sse` (paired with `POST /messages`)
 
+### Authentication (HTTP Transport)
+
+The HTTP transport supports Bearer token authentication as per the [MCP specification](https://modelcontextprotocol.io/specification/draft/basic/authorization).
+
+**Enable authentication:**
+```bash
+export MCP_AUTH_TOKEN=your-secure-random-token-here
+```
+
+When `MCP_AUTH_TOKEN` is set, all HTTP requests must include the `Authorization` header:
+```
+Authorization: Bearer your-secure-random-token-here
+```
+
+**Example with curl:**
+```bash
+curl -X POST http://127.0.0.1:8787/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secure-random-token-here" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}'
+```
+
+**Notes:**
+- If `MCP_AUTH_TOKEN` is not set, authentication is disabled (not recommended for production)
+- STDIO transport does not use HTTP authentication (credentials come from environment)
+- Generate a secure token: `openssl rand -hex 32`
+
 ### Run (WebSocket / standalone server)
 
 ```bash

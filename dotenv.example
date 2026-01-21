@@ -27,6 +27,15 @@ ODOO_PASSWORD=admin
 # ODOO_MAX_RETRIES=2
 #
 # =============================================================================
+# MCP Authentication (HTTP transport only)
+# =============================================================================
+# Set MCP_AUTH_TOKEN to enable Bearer token authentication for HTTP transport.
+# Clients must include "Authorization: Bearer <token>" header in all requests.
+# If not set, authentication is disabled (not recommended for production).
+#
+# MCP_AUTH_TOKEN=your-secure-random-token-here
+#
+# =============================================================================
 # MCP tool/prompt config (IMPORTANT for stdio transport)
 # =============================================================================
 # When using stdio transport (e.g., Cursor), the binary runs from a different

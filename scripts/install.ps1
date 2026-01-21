@@ -132,12 +132,16 @@ $env:ODOO_API_KEY = "YOUR_API_KEY"
 # $env:ODOO_USERNAME = "admin"
 # $env:ODOO_PASSWORD = "admin"
 
+# MCP Authentication (HTTP transport)
+# Generate a secure token in PowerShell: [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+$env:MCP_AUTH_TOKEN = "CHANGE_ME_TO_A_SECURE_TOKEN"
+
 # MCP Config paths
 $env:MCP_TOOLS_JSON = "C:\ProgramData\odoo-rust-mcp\tools.json"
 $env:MCP_PROMPTS_JSON = "C:\ProgramData\odoo-rust-mcp\prompts.json"
 $env:MCP_SERVER_JSON = "C:\ProgramData\odoo-rust-mcp\server.json"
 '@ | Out-File -FilePath $EnvFile -Encoding UTF8
-        Write-Warn "Please edit $EnvFile with your Odoo credentials"
+        Write-Warn "Please edit $EnvFile with your Odoo credentials and MCP_AUTH_TOKEN"
     }
 
     # Create wrapper script for service

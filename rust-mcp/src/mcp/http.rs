@@ -19,15 +19,37 @@ use tokio::sync::{broadcast, Mutex};
 use tokio_stream::wrappers::{BroadcastStream, IntervalStream};
 use tokio_stream::{iter, StreamExt};
 use tower_http::cors::CorsLayer;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::mcp::McpOdooHandler;
 
 static MCP_SESSION_ID: HeaderName = HeaderName::from_static("mcp-session-id");
+static AUTHORIZATION: HeaderName = HeaderName::from_static("authorization");
 
 #[derive(Clone, Default)]
 struct SessionState {
     initialized: bool,
+}
+
+/// Authentication configuration for HTTP transport
+#[derive(Clone)]
+pub struct AuthConfig {
+    /// Bearer token for authentication. If None, authentication is disabled.
+    pub bearer_token: Option<String>,
+}
+
+impl AuthConfig {
+    /// Load auth config from environment variables
+    pub fn from_env() -> Self {
+        let bearer_token = std::env::var("MCP_AUTH_TOKEN").ok().filter(|s| !s.is_empty());
+        if bearer_token.is_some() {
+            info!("MCP HTTP authentication enabled (Bearer token)");
+        } else {
+            warn!("MCP HTTP authentication disabled (set MCP_AUTH_TOKEN to enable)");
+        }
+        Self { bearer_token }
+    }
 }
 
 #[derive(Clone)]
@@ -35,13 +57,23 @@ struct AppState {
     handler: Arc<McpOdooHandler>,
     sessions: Arc<Mutex<HashMap<String, SessionState>>>,
     sse_channels: Arc<Mutex<HashMap<String, broadcast::Sender<Value>>>>,
+    auth: AuthConfig,
 }
 
 pub async fn serve(handler: Arc<McpOdooHandler>, listen: &str) -> anyhow::Result<()> {
+    serve_with_auth(handler, listen, AuthConfig::from_env()).await
+}
+
+pub async fn serve_with_auth(
+    handler: Arc<McpOdooHandler>,
+    listen: &str,
+    auth: AuthConfig,
+) -> anyhow::Result<()> {
     let state = AppState {
         handler,
         sessions: Arc::new(Mutex::new(HashMap::new())),
         sse_channels: Arc::new(Mutex::new(HashMap::new())),
+        auth,
     };
 
     let app = Router::new()
@@ -197,11 +229,59 @@ async fn handle_jsonrpc(
     Ok((None, Some(serde_json::to_value(resp).unwrap()), StatusCode::OK))
 }
 
+/// Validate Bearer token authentication
+fn validate_auth(headers: &HeaderMap, auth: &AuthConfig) -> Result<(), (StatusCode, Json<Value>)> {
+    let Some(expected_token) = &auth.bearer_token else {
+        // Auth disabled
+        return Ok(());
+    };
+
+    let auth_header = headers
+        .get(&AUTHORIZATION)
+        .and_then(|v| v.to_str().ok());
+
+    match auth_header {
+        Some(header) if header.starts_with("Bearer ") => {
+            let token = &header[7..];
+            if token == expected_token {
+                Ok(())
+            } else {
+                Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "error": "invalid_token",
+                        "error_description": "The access token is invalid"
+                    })),
+                ))
+            }
+        }
+        Some(_) => Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "invalid_request",
+                "error_description": "Authorization header must use Bearer scheme"
+            })),
+        )),
+        None => Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "invalid_request",
+                "error_description": "Missing Authorization header"
+            })),
+        )),
+    }
+}
+
 async fn mcp_post(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
+    // Validate authentication
+    if let Err(err) = validate_auth(&headers, &state.auth) {
+        return err.into_response();
+    }
+
     let session = headers
         .get(&MCP_SESSION_ID)
         .and_then(|v| v.to_str().ok())
@@ -224,7 +304,12 @@ async fn mcp_post(
     }
 }
 
-async fn mcp_get(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+async fn mcp_get(State(state): State<AppState>, headers: HeaderMap) -> axum::response::Response {
+    // Validate authentication
+    if let Err(err) = validate_auth(&headers, &state.auth) {
+        return err.into_response();
+    }
+
     // Optional server->client channel (notifications).
     let session = headers
         .get(&MCP_SESSION_ID)
@@ -248,7 +333,7 @@ async fn mcp_get(State(state): State<AppState>, headers: HeaderMap) -> impl Into
         Err(_) => None,
     });
 
-    Sse::new(keepalive.merge(stream)).keep_alive(axum::response::sse::KeepAlive::default())
+    Sse::new(keepalive.merge(stream)).keep_alive(axum::response::sse::KeepAlive::default()).into_response()
 }
 
 #[derive(Deserialize)]
@@ -257,7 +342,12 @@ struct LegacyQuery {
     session_id: Option<String>,
 }
 
-async fn legacy_sse(State(state): State<AppState>) -> impl IntoResponse {
+async fn legacy_sse(State(state): State<AppState>, headers: HeaderMap) -> axum::response::Response {
+    // Validate authentication
+    if let Err(err) = validate_auth(&headers, &state.auth) {
+        return err.into_response();
+    }
+
     let session_id = Uuid::new_v4().to_string();
     let tx = {
         let mut chans = state.sse_channels.lock().await;
@@ -281,6 +371,7 @@ async fn legacy_sse(State(state): State<AppState>) -> impl IntoResponse {
 
     Sse::new(endpoint_event.chain(stream))
         .keep_alive(axum::response::sse::KeepAlive::default())
+        .into_response()
 }
 
 async fn legacy_messages(
@@ -289,6 +380,11 @@ async fn legacy_messages(
     headers: HeaderMap,
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
+    // Validate authentication
+    if let Err(err) = validate_auth(&headers, &state.auth) {
+        return err.into_response();
+    }
+
     let session = q.session_id.or_else(|| {
         headers
             .get(&MCP_SESSION_ID)
@@ -300,7 +396,7 @@ async fn legacy_messages(
     let (_new_sess, maybe_resp, _status) = match handle_jsonrpc(&state, session.clone(), body).await
     {
         Ok(v) => v,
-        Err((_sc, _v)) => return StatusCode::BAD_REQUEST,
+        Err((_sc, _v)) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
     if let (Some(sess), Some(resp)) = (session, maybe_resp) {
@@ -309,7 +405,7 @@ async fn legacy_messages(
         }
     }
 
-    StatusCode::ACCEPTED
+    StatusCode::ACCEPTED.into_response()
 }
 
 trait ResponseExt {

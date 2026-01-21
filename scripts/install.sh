@@ -125,13 +125,17 @@ ODOO_API_KEY=YOUR_API_KEY
 # ODOO_USERNAME=admin
 # ODOO_PASSWORD=admin
 
+# MCP Authentication (HTTP transport)
+# Generate a secure token: openssl rand -hex 32
+MCP_AUTH_TOKEN=CHANGE_ME_TO_A_SECURE_TOKEN
+
 # MCP Config paths
 MCP_TOOLS_JSON=/usr/local/share/odoo-rust-mcp/tools.json
 MCP_PROMPTS_JSON=/usr/local/share/odoo-rust-mcp/prompts.json
 MCP_SERVER_JSON=/usr/local/share/odoo-rust-mcp/server.json
 ENVEOF
         sudo chmod 600 "$ENV_FILE"
-        warn "Please edit $ENV_FILE with your Odoo credentials"
+        warn "Please edit $ENV_FILE with your Odoo credentials and MCP_AUTH_TOKEN"
     fi
 
     # Create systemd service file
@@ -207,13 +211,17 @@ ODOO_API_KEY=YOUR_API_KEY
 # ODOO_USERNAME=admin
 # ODOO_PASSWORD=admin
 
+# MCP Authentication (HTTP transport)
+# Generate a secure token: openssl rand -hex 32
+MCP_AUTH_TOKEN=CHANGE_ME_TO_A_SECURE_TOKEN
+
 # MCP Config paths
 MCP_TOOLS_JSON=/usr/local/share/odoo-rust-mcp/tools.json
 MCP_PROMPTS_JSON=/usr/local/share/odoo-rust-mcp/prompts.json
 MCP_SERVER_JSON=/usr/local/share/odoo-rust-mcp/server.json
 ENVEOF
         chmod 600 "$user_env_file"
-        warn "Please edit $user_env_file with your Odoo credentials"
+        warn "Please edit $user_env_file with your Odoo credentials and MCP_AUTH_TOKEN"
     fi
 
     # Create launchd plist
