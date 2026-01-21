@@ -17,9 +17,14 @@ services:
       # IMPORTANT:
       # - If Odoo runs on your HOST at localhost:8069, containers must use host.docker.internal:8069 (Mac/Windows).
       # - On Linux, we add extra_hosts below so host.docker.internal resolves to the host gateway.
-      ODOO_URL: "http://host.docker.internal:8069"
-      ODOO_DB: "v19_pos"
-      ODOO_API_KEY: "${ODOO_API_KEY}"
+      ODOO_URL: "${ODOO_URL:-http://host.docker.internal:8069}"
+      ODOO_DB: "${ODOO_DB:-}"
+      # Odoo 19+ (JSON-2 API with API Key)
+      ODOO_API_KEY: "${ODOO_API_KEY:-}"
+      # Odoo < 19 (JSON-RPC with Username/Password)
+      ODOO_VERSION: "${ODOO_VERSION:-}"
+      ODOO_USERNAME: "${ODOO_USERNAME:-}"
+      ODOO_PASSWORD: "${ODOO_PASSWORD:-}"
       # MCP JSON config paths (inside container)
       MCP_TOOLS_JSON: "/config/tools.json"
       MCP_PROMPTS_JSON: "/config/prompts.json"
