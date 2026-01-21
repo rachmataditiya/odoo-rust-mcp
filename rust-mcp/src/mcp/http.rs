@@ -13,7 +13,6 @@ use axum::{Json, Router};
 use mcp_rust_sdk::error::{Error as McpError, ErrorCode};
 use mcp_rust_sdk::protocol::{RequestId, Response};
 use mcp_rust_sdk::server::ServerHandler;
-use mcp_rust_sdk::types::{ClientCapabilities, Implementation};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::sync::{broadcast, Mutex};
@@ -71,23 +70,29 @@ fn jsonrpc_err(id: RequestId, code: ErrorCode, message: impl Into<String>) -> Re
     )
 }
 
-fn parse_initialize_params(params: &Value) -> Result<(Implementation, ClientCapabilities), McpError> {
-    // Accept both MCP-spec-ish and mcp_rust_sdk legacy field names.
-    let impl_val = params
-        .get("implementation")
-        .cloned()
-        .or_else(|| params.get("client_info").cloned())
-        .or_else(|| params.get("clientInfo").cloned())
-        .or_else(|| params.get("clientInfo").cloned())
-        .unwrap_or_else(|| json!({ "name": "cursor", "version": "unknown" }));
+fn cursor_initialize_result(params: &Value, odoo_instances: Vec<String>) -> Result<Value, McpError> {
+    let protocol_version = params
+        .get("protocolVersion")
+        .and_then(|v| v.as_str())
+        .unwrap_or("2025-11-05")
+        .to_string();
 
-    let caps_val = params.get("capabilities").cloned().unwrap_or_else(|| json!({}));
-
-    let implementation: Implementation =
-        serde_json::from_value(impl_val).map_err(|e| McpError::Serialization(e.to_string()))?;
-    let capabilities: ClientCapabilities =
-        serde_json::from_value(caps_val).map_err(|e| McpError::Serialization(e.to_string()))?;
-    Ok((implementation, capabilities))
+    Ok(json!({
+        "protocolVersion": protocol_version,
+        "capabilities": {
+            "tools": {},
+            "prompts": {},
+            "resources": {},
+            "experimental": {
+                "odooInstances": { "available": odoo_instances }
+            }
+        },
+        "serverInfo": {
+            "name": "odoo-rust-mcp",
+            "version": env!("CARGO_PKG_VERSION")
+        },
+        "instructions": "Odoo MCP server (Rust). Use tools/* and prompts/* to interact with Odoo via JSON-2 API."
+    }))
 }
 
 async fn handle_jsonrpc(
@@ -113,21 +118,15 @@ async fn handle_jsonrpc(
         let id: RequestId = serde_json::from_value(id_val)
             .map_err(|e| (StatusCode::BAD_REQUEST, json!({"error": e.to_string()})))?;
         let params = params.unwrap_or_else(|| json!({}));
-        let (implementation, capabilities) = parse_initialize_params(&params)
+        let result = cursor_initialize_result(&params, state.handler.instance_names())
             .map_err(|e| (StatusCode::BAD_REQUEST, json!({"error": e.to_string()})))?;
-
-        let result = state
-            .handler
-            .initialize(implementation, capabilities)
-            .await
-            .map_err(|e| (StatusCode::OK, jsonrpc_err(id.clone(), ErrorCode::InternalError, e.to_string()).to_value()))?;
 
         let sess = Uuid::new_v4().to_string();
         state
             .sessions
             .lock()
             .await
-            .insert(sess.clone(), SessionState { initialized: false });
+            .insert(sess.clone(), SessionState { initialized: true });
         state
             .sse_channels
             .lock()
@@ -135,7 +134,7 @@ async fn handle_jsonrpc(
             .entry(sess.clone())
             .or_insert_with(|| broadcast::channel(256).0);
 
-        let resp = Response::success(id, Some(serde_json::to_value(result).unwrap_or_else(|_| json!({}))));
+        let resp = Response::success(id, Some(result));
         return Ok((Some(sess), Some(serde_json::to_value(resp).unwrap()), StatusCode::OK));
     }
 

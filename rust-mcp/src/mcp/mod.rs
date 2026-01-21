@@ -27,6 +27,10 @@ impl McpOdooHandler {
             enable_cleanup_tools,
         }
     }
+
+    pub fn instance_names(&self) -> Vec<String> {
+        self.pool.instance_names()
+    }
 }
 
 fn protocol_err(message: impl Into<String>) -> Error {
