@@ -94,5 +94,6 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit
       - name: Security audit
-        run: cargo audit --manifest-path rust-mcp/Cargo.toml
+        working-directory: rust-mcp
+        run: cargo audit
         continue-on-error: true
