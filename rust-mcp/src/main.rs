@@ -34,13 +34,8 @@ fn get_share_dir() -> Option<PathBuf> {
         PathBuf::from("/usr/share/rust-mcp"),
         PathBuf::from("/usr/local/share/odoo-rust-mcp"),
     ];
-    
-    for path in candidates {
-        if path.exists() {
-            return Some(path);
-        }
-    }
-    None
+
+    candidates.into_iter().find(|path| path.exists())
 }
 
 /// Default env file template
@@ -116,33 +111,37 @@ fn load_env_file(path: &PathBuf) {
         warn!("Could not open env file: {:?}", path);
         return;
     };
-    
+
     info!("Loading environment from: {:?}", path);
     let reader = BufReader::new(file);
     for line in reader.lines() {
         let Ok(line) = line else { continue };
         let line = line.trim();
-        
+
         // Skip empty lines and comments
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        
+
         // Parse key=value
         if let Some((key, value)) = line.split_once('=') {
             let key = key.trim();
             let value = value.trim();
-            
+
             // Only set if not already set (env vars take precedence)
             if std::env::var(key).is_err() {
                 // SAFETY: We're setting env vars at startup before any threads are spawned
-                unsafe { std::env::set_var(key, value); }
+                unsafe {
+                    std::env::set_var(key, value);
+                }
                 // Mask sensitive values in logs
-                let display_value = if key.contains("PASSWORD") || key.contains("API_KEY") || key.contains("TOKEN") {
-                    "***"
-                } else {
-                    value
-                };
+                let display_value =
+                    if key.contains("PASSWORD") || key.contains("API_KEY") || key.contains("TOKEN")
+                    {
+                        "***"
+                    } else {
+                        value
+                    };
                 info!("  Set {}={}", key, display_value);
             }
         }
@@ -151,10 +150,12 @@ fn load_env_file(path: &PathBuf) {
 
 /// Set environment variable if not already set
 fn set_default_env(key: &str, value: PathBuf) {
-    if std::env::var(key).is_err() {
-        if let Some(s) = value.to_str() {
-            // SAFETY: We're setting env vars at startup before any threads are spawned
-            unsafe { std::env::set_var(key, s); }
+    if std::env::var(key).is_err()
+        && let Some(s) = value.to_str()
+    {
+        // SAFETY: We're setting env vars at startup before any threads are spawned
+        unsafe {
+            std::env::set_var(key, s);
         }
     }
 }
