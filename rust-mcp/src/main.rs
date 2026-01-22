@@ -1,10 +1,13 @@
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
 use mcp_rust_sdk::transport::websocket::WebSocketTransport;
 use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use rust_mcp::mcp::McpOdooHandler;
 use rust_mcp::mcp::cursor_stdio::CursorStdioTransport;
@@ -12,6 +15,149 @@ use rust_mcp::mcp::http as mcp_http;
 use rust_mcp::mcp::registry::Registry;
 use rust_mcp::mcp::runtime::ServerCompat;
 use rust_mcp::mcp::tools::OdooClientPool;
+
+/// Get user config directory: ~/.config/odoo-rust-mcp/
+/// We use ~/.config/ for cross-platform consistency with the shell wrapper
+fn get_config_dir() -> Option<PathBuf> {
+    dirs::home_dir().map(|p| p.join(".config").join("odoo-rust-mcp"))
+}
+
+/// Get share directory for default configs (platform-specific)
+fn get_share_dir() -> Option<PathBuf> {
+    // Check common locations for Homebrew/system-installed configs
+    let candidates = [
+        // Homebrew Apple Silicon
+        PathBuf::from("/opt/homebrew/share/odoo-rust-mcp"),
+        // Homebrew Intel Mac
+        PathBuf::from("/usr/local/share/odoo-rust-mcp"),
+        // Linux (APT, manual install)
+        PathBuf::from("/usr/share/rust-mcp"),
+        PathBuf::from("/usr/local/share/odoo-rust-mcp"),
+    ];
+    
+    for path in candidates {
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    None
+}
+
+/// Default env file template
+const DEFAULT_ENV_TEMPLATE: &str = r#"# Odoo Rust MCP Server Configuration
+# Edit this file with your Odoo credentials
+
+# Odoo 19+ (API Key authentication)
+ODOO_URL=http://localhost:8069
+ODOO_DB=mydb
+ODOO_API_KEY=YOUR_API_KEY
+
+# Odoo < 19 (Username/Password authentication)
+# ODOO_URL=http://localhost:8069
+# ODOO_DB=mydb
+# ODOO_VERSION=18
+# ODOO_USERNAME=admin
+# ODOO_PASSWORD=admin
+
+# MCP Authentication (HTTP transport)
+# Generate a secure token: openssl rand -hex 32
+# MCP_AUTH_TOKEN=your-secure-random-token-here
+"#;
+
+/// Setup user config directory and load environment variables
+fn setup_user_config() {
+    let Some(config_dir) = get_config_dir() else {
+        warn!("Could not determine user config directory");
+        return;
+    };
+
+    // Create config directory if it doesn't exist
+    if !config_dir.exists() {
+        if let Err(e) = fs::create_dir_all(&config_dir) {
+            warn!("Failed to create config directory {:?}: {}", config_dir, e);
+        } else {
+            info!("Created config directory: {:?}", config_dir);
+        }
+    }
+
+    // Create default env file if it doesn't exist
+    let env_file = config_dir.join("env");
+    if !env_file.exists() {
+        if let Err(e) = fs::write(&env_file, DEFAULT_ENV_TEMPLATE) {
+            warn!("Failed to create default env file {:?}: {}", env_file, e);
+        } else {
+            // Set restrictive permissions on env file (Unix only)
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = fs::set_permissions(&env_file, fs::Permissions::from_mode(0o600));
+            }
+            info!("Created default env file: {:?}", env_file);
+            info!("Please edit it with your Odoo credentials");
+        }
+    }
+
+    // Load environment variables from env file
+    if env_file.exists() {
+        load_env_file(&env_file);
+    }
+
+    // Set default MCP config paths if not already set
+    if let Some(share_dir) = get_share_dir() {
+        set_default_env("MCP_TOOLS_JSON", share_dir.join("tools.json"));
+        set_default_env("MCP_PROMPTS_JSON", share_dir.join("prompts.json"));
+        set_default_env("MCP_SERVER_JSON", share_dir.join("server.json"));
+    }
+}
+
+/// Load environment variables from a file (simple key=value format)
+fn load_env_file(path: &PathBuf) {
+    let Ok(file) = fs::File::open(path) else {
+        warn!("Could not open env file: {:?}", path);
+        return;
+    };
+    
+    info!("Loading environment from: {:?}", path);
+    let reader = BufReader::new(file);
+    for line in reader.lines() {
+        let Ok(line) = line else { continue };
+        let line = line.trim();
+        
+        // Skip empty lines and comments
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        
+        // Parse key=value
+        if let Some((key, value)) = line.split_once('=') {
+            let key = key.trim();
+            let value = value.trim();
+            
+            // Only set if not already set (env vars take precedence)
+            if std::env::var(key).is_err() {
+                // SAFETY: We're setting env vars at startup before any threads are spawned
+                unsafe { std::env::set_var(key, value); }
+                // Mask sensitive values in logs
+                let display_value = if key.contains("PASSWORD") || key.contains("API_KEY") || key.contains("TOKEN") {
+                    "***"
+                } else {
+                    value
+                };
+                info!("  Set {}={}", key, display_value);
+            }
+        }
+    }
+}
+
+/// Set environment variable if not already set
+fn set_default_env(key: &str, value: PathBuf) {
+    if std::env::var(key).is_err() {
+        if let Some(s) = value.to_str() {
+            // SAFETY: We're setting env vars at startup before any threads are spawned
+            unsafe { std::env::set_var(key, s); }
+        }
+    }
+}
 
 #[derive(Debug, Clone, ValueEnum)]
 enum TransportMode {
@@ -41,6 +187,9 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+
+    // Auto-load user config from ~/.config/odoo-rust-mcp/
+    setup_user_config();
 
     let cli = Cli::parse();
     let pool = OdooClientPool::from_env()?;
