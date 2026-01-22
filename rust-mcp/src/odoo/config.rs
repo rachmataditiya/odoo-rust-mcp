@@ -72,8 +72,21 @@ pub struct OdooEnvConfig {
 pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
     let mut instances = HashMap::new();
 
-    // Prefer ODOO_INSTANCES JSON.
-    if let Ok(raw) = std::env::var("ODOO_INSTANCES")
+    // Priority 1: ODOO_INSTANCES_JSON file path (for readable multi-line JSON)
+    if let Ok(path) = std::env::var("ODOO_INSTANCES_JSON")
+        && !path.trim().is_empty()
+    {
+        let content = std::fs::read_to_string(&path).map_err(|e| {
+            anyhow::anyhow!("Failed to read ODOO_INSTANCES_JSON file '{path}': {e}")
+        })?;
+        let parsed: HashMap<String, OdooInstanceConfig> =
+            serde_json::from_str(&content).map_err(|e| {
+                anyhow::anyhow!("Failed to parse ODOO_INSTANCES_JSON file '{path}': {e}")
+            })?;
+        instances.extend(parsed);
+    }
+    // Priority 2: ODOO_INSTANCES inline JSON
+    else if let Ok(raw) = std::env::var("ODOO_INSTANCES")
         && !raw.trim().is_empty()
     {
         let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&raw)
