@@ -21,7 +21,7 @@ jobs:
     name: Test Homebrew (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Homebrew formula locally
         run: |
@@ -106,7 +106,7 @@ jobs:
     name: Test Debian Package (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Test postinst script logic
         run: |
@@ -216,7 +216,7 @@ jobs:
     name: Test install.sh (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build binary
         run: |
@@ -267,7 +267,7 @@ jobs:
     name: Test install.ps1 (Windows)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build binary
         run: |
@@ -319,7 +319,7 @@ jobs:
     name: Test Homebrew (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Test wrapper script on Linux
         run: |
