@@ -86,7 +86,7 @@ jobs:
           Compress-Archive -Path release/* -DestinationPath "${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
           path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}
@@ -274,7 +274,7 @@ jobs:
           cargo deb --target ${{ matrix.target }} --no-build
 
       - name: Upload deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rust-mcp-${{ matrix.arch }}.deb
           path: rust-mcp/target/${{ matrix.target }}/debian/*.deb
