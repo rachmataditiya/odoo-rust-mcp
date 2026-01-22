@@ -78,8 +78,8 @@ jobs:
         run: |
           cd rust-mcp
           cargo tarpaulin --out xml --output-dir coverage
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: rust-mcp/coverage/cobertura.xml
