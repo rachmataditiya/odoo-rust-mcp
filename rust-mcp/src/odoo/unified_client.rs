@@ -48,12 +48,7 @@ pub trait OdooClientTrait: Send + Sync {
         context: Option<Value>,
     ) -> OdooResult<bool>;
 
-    async fn unlink(
-        &self,
-        model: &str,
-        ids: Vec<i64>,
-        context: Option<Value>,
-    ) -> OdooResult<bool>;
+    async fn unlink(&self, model: &str, ids: Vec<i64>, context: Option<Value>) -> OdooResult<bool>;
 
     async fn search_count(
         &self,
@@ -452,12 +447,7 @@ impl OdooClientTrait for OdooClient {
         self.write(model, ids, values, context).await
     }
 
-    async fn unlink(
-        &self,
-        model: &str,
-        ids: Vec<i64>,
-        context: Option<Value>,
-    ) -> OdooResult<bool> {
+    async fn unlink(&self, model: &str, ids: Vec<i64>, context: Option<Value>) -> OdooResult<bool> {
         self.unlink(model, ids, context).await
     }
 

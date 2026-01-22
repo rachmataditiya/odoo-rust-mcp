@@ -218,14 +218,25 @@ async fn test_read_group_success() {
 #[tokio::test]
 async fn test_name_search_success() {
     let mock = MockOdooServer::start().await;
-    mock.mock_method("res.partner", "name_search", responses::name_search_results())
-        .await;
+    mock.mock_method(
+        "res.partner",
+        "name_search",
+        responses::name_search_results(),
+    )
+    .await;
 
     let config = create_config(&mock.uri());
     let client = OdooHttpClient::new(&config).unwrap();
 
     let result = client
-        .name_search("res.partner", Some("Partner".to_string()), None, None, None, None)
+        .name_search(
+            "res.partner",
+            Some("Partner".to_string()),
+            None,
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
 
@@ -253,8 +264,12 @@ async fn test_name_get_success() {
 #[tokio::test]
 async fn test_default_get_success() {
     let mock = MockOdooServer::start().await;
-    mock.mock_method("res.partner", "default_get", responses::default_get_partner())
-        .await;
+    mock.mock_method(
+        "res.partner",
+        "default_get",
+        responses::default_get_partner(),
+    )
+    .await;
 
     let config = create_config(&mock.uri());
     let client = OdooHttpClient::new(&config).unwrap();
@@ -389,7 +404,10 @@ async fn test_content_type_header_sent() {
     // The content-type header includes charset, so we just check it starts with application/json
     Mock::given(method("POST"))
         .and(path_regex(r"/json/2/res\.partner/search"))
-        .and(wiremock::matchers::header_regex("content-type", "application/json.*"))
+        .and(wiremock::matchers::header_regex(
+            "content-type",
+            "application/json.*",
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!([1])))
         .mount(&mock.server)
         .await;

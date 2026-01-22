@@ -5,10 +5,10 @@ mod common;
 use axum::http::{HeaderName, HeaderValue};
 use axum_test::TestServer;
 use common::{minimal_prompts_json, minimal_server_json, minimal_tools_json};
-use rust_mcp::mcp::http::{create_app, AuthConfig};
+use rust_mcp::mcp::McpOdooHandler;
+use rust_mcp::mcp::http::{AuthConfig, create_app};
 use rust_mcp::mcp::registry::Registry;
 use rust_mcp::mcp::tools::OdooClientPool;
-use rust_mcp::mcp::McpOdooHandler;
 use serde_json::json;
 use std::sync::Arc;
 use tempfile::TempDir;
@@ -32,15 +32,27 @@ async fn setup_test_server(with_auth: bool) -> (TestServer, TempDir) {
         std::env::set_var("ODOO_API_KEY", "test_key");
         std::env::set_var(
             "MCP_TOOLS_JSON",
-            temp_dir.path().join("tools.json").to_string_lossy().to_string(),
+            temp_dir
+                .path()
+                .join("tools.json")
+                .to_string_lossy()
+                .to_string(),
         );
         std::env::set_var(
             "MCP_PROMPTS_JSON",
-            temp_dir.path().join("prompts.json").to_string_lossy().to_string(),
+            temp_dir
+                .path()
+                .join("prompts.json")
+                .to_string_lossy()
+                .to_string(),
         );
         std::env::set_var(
             "MCP_SERVER_JSON",
-            temp_dir.path().join("server.json").to_string_lossy().to_string(),
+            temp_dir
+                .path()
+                .join("server.json")
+                .to_string_lossy()
+                .to_string(),
         );
     }
 
@@ -112,7 +124,10 @@ async fn test_mcp_post_initialize_returns_session_id() {
     response.assert_status_ok();
     // Check for session ID header
     let session_header = response.headers().get("mcp-session-id");
-    assert!(session_header.is_some(), "Should return mcp-session-id header");
+    assert!(
+        session_header.is_some(),
+        "Should return mcp-session-id header"
+    );
 }
 
 // ============================================================================

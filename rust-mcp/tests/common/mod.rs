@@ -29,7 +29,11 @@ impl TestEnv {
 
     /// Get path for a config file in the temp directory.
     pub fn config_path(&self, name: &str) -> String {
-        self.temp_dir.path().join(name).to_string_lossy().to_string()
+        self.temp_dir
+            .path()
+            .join(name)
+            .to_string_lossy()
+            .to_string()
     }
 
     /// Write a config file to the temp directory.
@@ -83,7 +87,10 @@ impl MockOdooServer {
     pub async fn mock_search_read(&self, model: &str, response: Value) {
         let escaped_model = model.replace('.', r"\.");
         Mock::given(method("POST"))
-            .and(path_regex(format!(r"/json/2/{}/search_read", escaped_model)))
+            .and(path_regex(format!(
+                r"/json/2/{}/search_read",
+                escaped_model
+            )))
             .respond_with(ResponseTemplate::new(200).set_body_json(response))
             .mount(&self.server)
             .await;
@@ -133,7 +140,10 @@ impl MockOdooServer {
     pub async fn mock_search_count(&self, model: &str, count: i64) {
         let escaped_model = model.replace('.', r"\.");
         Mock::given(method("POST"))
-            .and(path_regex(format!(r"/json/2/{}/search_count", escaped_model)))
+            .and(path_regex(format!(
+                r"/json/2/{}/search_count",
+                escaped_model
+            )))
             .respond_with(ResponseTemplate::new(200).set_body_json(count))
             .mount(&self.server)
             .await;
@@ -153,7 +163,10 @@ impl MockOdooServer {
     pub async fn mock_method(&self, model: &str, method_name: &str, response: Value) {
         let escaped_model = model.replace('.', r"\.");
         Mock::given(method("POST"))
-            .and(path_regex(format!(r"/json/2/{}/{}", escaped_model, method_name)))
+            .and(path_regex(format!(
+                r"/json/2/{}/{}",
+                escaped_model, method_name
+            )))
             .respond_with(ResponseTemplate::new(200).set_body_json(response))
             .mount(&self.server)
             .await;
@@ -163,19 +176,19 @@ impl MockOdooServer {
     pub async fn mock_error(&self, model: &str, method_name: &str, status: u16, error_msg: &str) {
         let escaped_model = model.replace('.', r"\.");
         Mock::given(method("POST"))
-            .and(path_regex(format!(r"/json/2/{}/{}", escaped_model, method_name)))
-            .respond_with(
-                ResponseTemplate::new(status)
-                    .set_body_json(json!({
-                        "error": {
-                            "message": error_msg,
-                            "data": {
-                                "name": "odoo.exceptions.AccessDenied",
-                                "debug": "Access Denied"
-                            }
-                        }
-                    })),
-            )
+            .and(path_regex(format!(
+                r"/json/2/{}/{}",
+                escaped_model, method_name
+            )))
+            .respond_with(ResponseTemplate::new(status).set_body_json(json!({
+                "error": {
+                    "message": error_msg,
+                    "data": {
+                        "name": "odoo.exceptions.AccessDenied",
+                        "debug": "Access Denied"
+                    }
+                }
+            })))
             .mount(&self.server)
             .await;
     }
@@ -258,11 +271,7 @@ pub mod responses {
 
     /// Sample name_search response.
     pub fn name_search_results() -> Value {
-        json!([
-            [1, "Partner 1"],
-            [2, "Partner 2"],
-            [3, "Partner 3"]
-        ])
+        json!([[1, "Partner 1"], [2, "Partner 2"], [3, "Partner 3"]])
     }
 
     /// Sample default_get response.

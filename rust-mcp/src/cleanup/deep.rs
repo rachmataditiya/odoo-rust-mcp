@@ -599,7 +599,7 @@ mod tests {
             errors: vec![],
             default_data_retained: vec!["Admin user".to_string()],
         };
-        
+
         assert!(report.success);
         assert!(report.dry_run);
         assert_eq!(report.warnings.len(), 1);

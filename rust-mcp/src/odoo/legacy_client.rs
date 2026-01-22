@@ -615,7 +615,12 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn make_legacy_config(url: &str, db: Option<&str>, username: Option<&str>, password: Option<&str>) -> OdooInstanceConfig {
+    fn make_legacy_config(
+        url: &str,
+        db: Option<&str>,
+        username: Option<&str>,
+        password: Option<&str>,
+    ) -> OdooInstanceConfig {
         OdooInstanceConfig {
             url: url.to_string(),
             db: db.map(|s| s.to_string()),
@@ -631,7 +636,12 @@ mod tests {
 
     #[test]
     fn test_legacy_client_new_success() {
-        let cfg = make_legacy_config("http://localhost:8069", Some("mydb"), Some("admin"), Some("admin"));
+        let cfg = make_legacy_config(
+            "http://localhost:8069",
+            Some("mydb"),
+            Some("admin"),
+            Some("admin"),
+        );
         let client = OdooLegacyClient::new(&cfg);
         assert!(client.is_ok());
     }
@@ -680,7 +690,12 @@ mod tests {
 
     #[test]
     fn test_legacy_client_stores_credentials() {
-        let cfg = make_legacy_config("http://localhost:8069", Some("mydb"), Some("admin"), Some("secret"));
+        let cfg = make_legacy_config(
+            "http://localhost:8069",
+            Some("mydb"),
+            Some("admin"),
+            Some("secret"),
+        );
         let client = OdooLegacyClient::new(&cfg).unwrap();
         assert_eq!(client.db, "mydb");
         assert_eq!(client.username, "admin");
@@ -706,14 +721,24 @@ mod tests {
 
     #[test]
     fn test_legacy_client_custom_max_retries() {
-        let cfg = make_legacy_config("http://localhost:8069", Some("db"), Some("user"), Some("pass"));
+        let cfg = make_legacy_config(
+            "http://localhost:8069",
+            Some("db"),
+            Some("user"),
+            Some("pass"),
+        );
         let client = OdooLegacyClient::new(&cfg).unwrap();
         assert_eq!(client.max_retries, 2); // from config
     }
 
     #[test]
     fn test_legacy_client_jsonrpc_endpoint() {
-        let cfg = make_legacy_config("http://localhost:8069", Some("db"), Some("user"), Some("pass"));
+        let cfg = make_legacy_config(
+            "http://localhost:8069",
+            Some("db"),
+            Some("user"),
+            Some("pass"),
+        );
         let client = OdooLegacyClient::new(&cfg).unwrap();
         let endpoint = client.jsonrpc_endpoint();
         assert_eq!(endpoint.path(), "/jsonrpc");
@@ -721,7 +746,12 @@ mod tests {
 
     #[test]
     fn test_legacy_client_build_jsonrpc_request() {
-        let cfg = make_legacy_config("http://localhost:8069", Some("db"), Some("user"), Some("pass"));
+        let cfg = make_legacy_config(
+            "http://localhost:8069",
+            Some("db"),
+            Some("user"),
+            Some("pass"),
+        );
         let client = OdooLegacyClient::new(&cfg).unwrap();
         let request = client.build_jsonrpc_request("common", "version", json!([]));
 

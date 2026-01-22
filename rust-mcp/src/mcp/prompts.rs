@@ -167,7 +167,7 @@ mod tests {
             ("another".to_string(), "Another prompt".to_string()),
         ];
         let result = list_prompts_result(&prompts);
-        
+
         assert!(result.is_object());
         let prompts_arr = result["prompts"].as_array().unwrap();
         assert_eq!(prompts_arr.len(), 2);
@@ -183,10 +183,10 @@ mod tests {
             content: "Test content here".to_string(),
         };
         let result = get_prompt_result(&prompt);
-        
+
         assert!(result.is_object());
         assert_eq!(result["description"], "Test description");
-        
+
         let messages = result["messages"].as_array().unwrap();
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0]["role"], "user");

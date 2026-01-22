@@ -6,8 +6,8 @@ use rust_mcp::odoo::config::OdooInstanceConfig;
 use rust_mcp::odoo::legacy_client::OdooLegacyClient;
 use serde_json::json;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, Respond, ResponseTemplate};
 
@@ -228,7 +228,10 @@ async fn test_legacy_read_success() {
     let config = create_legacy_config(&server.uri());
     let client = OdooLegacyClient::new(&config).unwrap();
 
-    let result = client.read("res.partner", vec![1], None, None).await.unwrap();
+    let result = client
+        .read("res.partner", vec![1], None, None)
+        .await
+        .unwrap();
 
     assert!(result.is_array());
 }
@@ -287,7 +290,10 @@ async fn test_legacy_unlink_success() {
     let config = create_legacy_config(&server.uri());
     let client = OdooLegacyClient::new(&config).unwrap();
 
-    let result = client.unlink("res.partner", vec![1, 2], None).await.unwrap();
+    let result = client
+        .unlink("res.partner", vec![1, 2], None)
+        .await
+        .unwrap();
 
     assert!(result);
 }
@@ -345,10 +351,7 @@ async fn test_legacy_fields_get_success() {
 async fn test_legacy_name_search_success() {
     let server = MockServer::start().await;
 
-    let results = json!([
-        [1, "Partner 1"],
-        [2, "Partner 2"]
-    ]);
+    let results = json!([[1, "Partner 1"], [2, "Partner 2"]]);
 
     Mock::given(method("POST"))
         .and(path("/jsonrpc"))
@@ -360,7 +363,14 @@ async fn test_legacy_name_search_success() {
     let client = OdooLegacyClient::new(&config).unwrap();
 
     let result = client
-        .name_search("res.partner", Some("Partner".to_string()), None, None, None, None)
+        .name_search(
+            "res.partner",
+            Some("Partner".to_string()),
+            None,
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
 
@@ -396,7 +406,9 @@ async fn test_legacy_rpc_error() {
 
     Mock::given(method("POST"))
         .and(path("/jsonrpc"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(jsonrpc_error(-32603, "Internal error")))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(jsonrpc_error(-32603, "Internal error")),
+        )
         .mount(&server)
         .await;
 

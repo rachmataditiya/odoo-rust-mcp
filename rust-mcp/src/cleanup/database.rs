@@ -607,7 +607,7 @@ mod tests {
             errors: vec![],
             dry_run: true,
         };
-        
+
         assert!(report.success);
         assert!(report.dry_run);
         assert_eq!(report.warnings.len(), 1);
