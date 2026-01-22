@@ -528,3 +528,110 @@ async fn clear_caches(client: &OdooClient) -> Result<bool, OdooError> {
 
     Ok(true)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cleanup_options_defaults() {
+        let json = "{}";
+        let options: CleanupOptions = serde_json::from_str(json).unwrap();
+        assert!(options.remove_test_data.is_none());
+        assert!(options.dry_run.is_none());
+        assert!(options.days_threshold.is_none());
+    }
+
+    #[test]
+    fn test_cleanup_options_with_values() {
+        let json = r#"{
+            "remove_test_data": true,
+            "dry_run": true,
+            "days_threshold": 90
+        }"#;
+        let options: CleanupOptions = serde_json::from_str(json).unwrap();
+        assert_eq!(options.remove_test_data, Some(true));
+        assert_eq!(options.dry_run, Some(true));
+        assert_eq!(options.days_threshold, Some(90));
+    }
+
+    #[test]
+    fn test_cleanup_report_summary_serialization() {
+        let summary = CleanupReportSummary {
+            test_data_removed: 10,
+            inactive_records_archived: 20,
+            drafts_cleaned: 5,
+            orphan_records_removed: 3,
+            logs_cleaned: 100,
+            attachments_cleaned: 50,
+            cache_cleared: true,
+            total_records_processed: 188,
+        };
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(json.contains("testDataRemoved")); // camelCase
+        assert!(json.contains("188"));
+    }
+
+    #[test]
+    fn test_cleanup_detail_serialization() {
+        let detail = CleanupDetail {
+            operation: "test_op".to_string(),
+            model: "res.partner".to_string(),
+            records_affected: 42,
+            details: "Test details".to_string(),
+            status: "success".to_string(),
+        };
+        let json = serde_json::to_string(&detail).unwrap();
+        assert!(json.contains("test_op"));
+        assert!(json.contains("res.partner"));
+        assert!(json.contains("42"));
+    }
+
+    #[test]
+    fn test_cleanup_report_new() {
+        let report = CleanupReport {
+            success: true,
+            timestamp: "2026-01-22T00:00:00Z".to_string(),
+            summary: CleanupReportSummary {
+                test_data_removed: 0,
+                inactive_records_archived: 0,
+                drafts_cleaned: 0,
+                orphan_records_removed: 0,
+                logs_cleaned: 0,
+                attachments_cleaned: 0,
+                cache_cleared: false,
+                total_records_processed: 0,
+            },
+            details: vec![],
+            warnings: vec!["warning1".to_string()],
+            errors: vec![],
+            dry_run: true,
+        };
+        
+        assert!(report.success);
+        assert!(report.dry_run);
+        assert_eq!(report.warnings.len(), 1);
+        assert!(report.errors.is_empty());
+    }
+
+    #[test]
+    fn test_cleanup_options_all_flags() {
+        let json = r#"{
+            "remove_test_data": false,
+            "remove_inactive_records": true,
+            "cleanup_drafts": false,
+            "archive_old_records": true,
+            "optimize_database": false,
+            "days_threshold": 365,
+            "dry_run": false
+        }"#;
+        let options: CleanupOptions = serde_json::from_str(json).unwrap();
+        assert_eq!(options.remove_test_data, Some(false));
+        assert_eq!(options.remove_inactive_records, Some(true));
+        assert_eq!(options.cleanup_drafts, Some(false));
+        assert_eq!(options.archive_old_records, Some(true));
+        assert_eq!(options.optimize_database, Some(false));
+        assert_eq!(options.days_threshold, Some(365));
+        assert_eq!(options.dry_run, Some(false));
+    }
+}

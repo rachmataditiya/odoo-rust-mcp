@@ -138,3 +138,85 @@ pub fn get_prompt_result(prompt: &Prompt) -> Value {
         ]
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_prompts_not_empty() {
+        let prompts = default_prompts();
+        assert!(!prompts.is_empty());
+        assert!(prompts.len() >= 2); // We have at least 2 prompts defined
+    }
+
+    #[test]
+    fn test_default_prompts_have_content() {
+        let prompts = default_prompts();
+        for p in prompts {
+            assert!(!p.name.is_empty());
+            assert!(!p.description.is_empty());
+            assert!(!p.content.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_list_prompts_result_format() {
+        let prompts = vec![
+            ("test_prompt".to_string(), "A test prompt".to_string()),
+            ("another".to_string(), "Another prompt".to_string()),
+        ];
+        let result = list_prompts_result(&prompts);
+        
+        assert!(result.is_object());
+        let prompts_arr = result["prompts"].as_array().unwrap();
+        assert_eq!(prompts_arr.len(), 2);
+        assert_eq!(prompts_arr[0]["name"], "test_prompt");
+        assert_eq!(prompts_arr[0]["description"], "A test prompt");
+    }
+
+    #[test]
+    fn test_get_prompt_result_format() {
+        let prompt = Prompt {
+            name: "test".to_string(),
+            description: "Test description".to_string(),
+            content: "Test content here".to_string(),
+        };
+        let result = get_prompt_result(&prompt);
+        
+        assert!(result.is_object());
+        assert_eq!(result["description"], "Test description");
+        
+        let messages = result["messages"].as_array().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0]["role"], "user");
+        assert_eq!(messages[0]["content"]["type"], "text");
+        assert_eq!(messages[0]["content"]["text"], "Test content here");
+    }
+
+    #[test]
+    fn test_prompt_serialization() {
+        let prompt = Prompt {
+            name: "test".to_string(),
+            description: "desc".to_string(),
+            content: "content".to_string(),
+        };
+        let json = serde_json::to_string(&prompt).unwrap();
+        let parsed: Prompt = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "test");
+        assert_eq!(parsed.description, "desc");
+        assert_eq!(parsed.content, "content");
+    }
+
+    #[test]
+    fn test_prompts_constant_has_odoo_models() {
+        let found = PROMPTS.iter().any(|p| p.name == "odoo_common_models");
+        assert!(found);
+    }
+
+    #[test]
+    fn test_prompts_constant_has_domain_filters() {
+        let found = PROMPTS.iter().any(|p| p.name == "odoo_domain_filters");
+        assert!(found);
+    }
+}

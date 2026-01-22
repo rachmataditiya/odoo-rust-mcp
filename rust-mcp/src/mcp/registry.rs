@@ -385,3 +385,212 @@ fn validate_cursor_schema(schema: &Value) -> anyhow::Result<()> {
 
     walk(schema)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_validate_cursor_schema_valid() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "integer" }
+            },
+            "required": ["name"]
+        });
+        assert!(validate_cursor_schema(&schema).is_ok());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_rejects_anyof() {
+        let schema = json!({
+            "anyOf": [
+                { "type": "string" },
+                { "type": "integer" }
+            ]
+        });
+        let result = validate_cursor_schema(&schema);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("anyOf"));
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_rejects_oneof() {
+        let schema = json!({
+            "oneOf": [
+                { "type": "string" }
+            ]
+        });
+        assert!(validate_cursor_schema(&schema).is_err());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_rejects_allof() {
+        let schema = json!({
+            "allOf": [
+                { "type": "object" }
+            ]
+        });
+        assert!(validate_cursor_schema(&schema).is_err());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_rejects_ref() {
+        let schema = json!({
+            "$ref": "#/definitions/SomeType"
+        });
+        assert!(validate_cursor_schema(&schema).is_err());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_rejects_definitions() {
+        let schema = json!({
+            "definitions": {
+                "SomeType": { "type": "string" }
+            }
+        });
+        assert!(validate_cursor_schema(&schema).is_err());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_rejects_type_array() {
+        let schema = json!({
+            "type": ["string", "null"]
+        });
+        assert!(validate_cursor_schema(&schema).is_err());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_nested_valid() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": { "type": "integer" }
+                        }
+                    }
+                }
+            }
+        });
+        assert!(validate_cursor_schema(&schema).is_ok());
+    }
+
+    #[test]
+    fn test_validate_cursor_schema_nested_invalid() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "value": {
+                    "anyOf": [{ "type": "string" }]
+                }
+            }
+        });
+        assert!(validate_cursor_schema(&schema).is_err());
+    }
+
+    #[test]
+    fn test_env_truthy_missing_var() {
+        assert!(!env_truthy("DEFINITELY_NOT_SET_VAR_12345"));
+    }
+
+    #[test]
+    fn test_guards_allow_none() {
+        assert!(guards_allow(None));
+    }
+
+    #[test]
+    fn test_guards_allow_with_missing_env() {
+        let guards = ToolGuards {
+            requires_env_true: Some("MISSING_ENV_VAR_12345".to_string()),
+        };
+        assert!(!guards_allow(Some(&guards)));
+    }
+
+    #[test]
+    fn test_parent_dir_or_current_with_parent() {
+        let path = std::path::Path::new("/some/path/file.json");
+        let parent = parent_dir_or_current(path);
+        assert_eq!(parent, std::path::PathBuf::from("/some/path"));
+    }
+
+    #[test]
+    fn test_parent_dir_or_current_no_parent() {
+        let path = std::path::Path::new("file.json");
+        let parent = parent_dir_or_current(path);
+        // On some systems, parent() of "file.json" returns Some(""), not None
+        // The function should return "." for empty parent or current dir
+        assert!(parent == std::path::PathBuf::from(".") || parent == std::path::PathBuf::from(""));
+    }
+
+    #[test]
+    fn test_tool_def_deserialize() {
+        let json = r#"{
+            "name": "test_tool",
+            "description": "A test tool",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            },
+            "op": {
+                "type": "search",
+                "map": { "model": "res.partner" }
+            }
+        }"#;
+        let tool: ToolDef = serde_json::from_str(json).unwrap();
+        assert_eq!(tool.name, "test_tool");
+        assert_eq!(tool.description, "A test tool");
+        assert_eq!(tool.op.op_type, "search");
+        assert_eq!(tool.op.map.get("model"), Some(&"res.partner".to_string()));
+        assert!(tool.guards.is_none());
+    }
+
+    #[test]
+    fn test_tool_def_deserialize_with_guards() {
+        let json = r#"{
+            "name": "guarded_tool",
+            "description": "A guarded tool",
+            "inputSchema": { "type": "object" },
+            "op": { "type": "execute" },
+            "guards": {
+                "requiresEnvTrue": "ENABLE_DANGEROUS_TOOLS"
+            }
+        }"#;
+        let tool: ToolDef = serde_json::from_str(json).unwrap();
+        assert!(tool.guards.is_some());
+        assert_eq!(
+            tool.guards.unwrap().requires_env_true,
+            Some("ENABLE_DANGEROUS_TOOLS".to_string())
+        );
+    }
+
+    #[test]
+    fn test_op_spec_deserialize() {
+        let json = r#"{
+            "type": "search_read",
+            "map": {
+                "model": "sale.order",
+                "fields": "id,name"
+            }
+        }"#;
+        let op: OpSpec = serde_json::from_str(json).unwrap();
+        assert_eq!(op.op_type, "search_read");
+        assert_eq!(op.map.len(), 2);
+    }
+
+    #[test]
+    fn test_registry_state_empty() {
+        let state = RegistryState::empty();
+        assert!(state.tools.is_empty());
+        assert!(state.tool_by_name.is_empty());
+        assert!(state.prompts_by_name.is_empty());
+        assert!(state.prompt_order.is_empty());
+        assert_eq!(state.server.server_name, "odoo-rust-mcp");
+    }
+}

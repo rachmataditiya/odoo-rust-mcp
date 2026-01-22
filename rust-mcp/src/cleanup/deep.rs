@@ -486,3 +486,170 @@ async fn identify_default_data(client: &OdooClient) -> OdooResult<Vec<String>> {
     defaults.push("✓ System Configuration Retained".to_string());
     Ok(defaults)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deep_cleanup_options_defaults() {
+        let json = "{}";
+        let options: DeepCleanupOptions = serde_json::from_str(json).unwrap();
+        assert!(options.dry_run.is_none());
+        assert!(options.keep_company_defaults.is_none());
+        assert!(options.keep_user_accounts.is_none());
+        assert!(options.keep_menus.is_none());
+        assert!(options.keep_groups.is_none());
+    }
+
+    #[test]
+    fn test_deep_cleanup_options_with_values() {
+        let json = r#"{
+            "dryRun": true,
+            "keepCompanyDefaults": true,
+            "keepUserAccounts": false,
+            "keepMenus": true,
+            "keepGroups": false
+        }"#;
+        let options: DeepCleanupOptions = serde_json::from_str(json).unwrap();
+        assert_eq!(options.dry_run, Some(true));
+        assert_eq!(options.keep_company_defaults, Some(true));
+        assert_eq!(options.keep_user_accounts, Some(false));
+        assert_eq!(options.keep_menus, Some(true));
+        assert_eq!(options.keep_groups, Some(false));
+    }
+
+    #[test]
+    fn test_deep_cleanup_summary_serialization() {
+        let summary = DeepCleanupSummary {
+            partners_removed: 100,
+            sales_orders_removed: 50,
+            invoices_removed: 30,
+            purchase_orders_removed: 20,
+            stock_moves_removed: 200,
+            documents_removed: 10,
+            contacts_removed: 80,
+            leads_removed: 15,
+            opportunities_removed: 25,
+            projects_removed: 5,
+            tasks_removed: 40,
+            attendees_removed: 60,
+            events_removed: 12,
+            journals_removed: 3,
+            accounts_removed: 50,
+            products_removed: 150,
+            stock_locations_removed: 8,
+            warehouses_removed: 2,
+            employees_removed: 20,
+            departments_removed: 4,
+            logs_and_attachments: 500,
+            total_records_removed: 1384,
+        };
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(json.contains("partnersRemoved")); // camelCase
+        assert!(json.contains("1384"));
+    }
+
+    #[test]
+    fn test_deep_cleanup_detail_serialization() {
+        let detail = DeepCleanupDetail {
+            model: "res.partner".to_string(),
+            records_removed: 42,
+            details: "Removed partners".to_string(),
+            status: "success".to_string(),
+        };
+        let json = serde_json::to_string(&detail).unwrap();
+        assert!(json.contains("res.partner"));
+        assert!(json.contains("recordsRemoved")); // camelCase
+        assert!(json.contains("42"));
+    }
+
+    #[test]
+    fn test_deep_cleanup_report_new() {
+        let report = DeepCleanupReport {
+            success: true,
+            timestamp: "2026-01-22T00:00:00Z".to_string(),
+            dry_run: true,
+            summary: DeepCleanupSummary {
+                partners_removed: 0,
+                sales_orders_removed: 0,
+                invoices_removed: 0,
+                purchase_orders_removed: 0,
+                stock_moves_removed: 0,
+                documents_removed: 0,
+                contacts_removed: 0,
+                leads_removed: 0,
+                opportunities_removed: 0,
+                projects_removed: 0,
+                tasks_removed: 0,
+                attendees_removed: 0,
+                events_removed: 0,
+                journals_removed: 0,
+                accounts_removed: 0,
+                products_removed: 0,
+                stock_locations_removed: 0,
+                warehouses_removed: 0,
+                employees_removed: 0,
+                departments_removed: 0,
+                logs_and_attachments: 0,
+                total_records_removed: 0,
+            },
+            details: vec![],
+            warnings: vec!["Test warning".to_string()],
+            errors: vec![],
+            default_data_retained: vec!["Admin user".to_string()],
+        };
+        
+        assert!(report.success);
+        assert!(report.dry_run);
+        assert_eq!(report.warnings.len(), 1);
+        assert_eq!(report.default_data_retained.len(), 1);
+    }
+
+    #[test]
+    fn test_deep_cleanup_summary_zero_values() {
+        let summary = DeepCleanupSummary {
+            partners_removed: 0,
+            sales_orders_removed: 0,
+            invoices_removed: 0,
+            purchase_orders_removed: 0,
+            stock_moves_removed: 0,
+            documents_removed: 0,
+            contacts_removed: 0,
+            leads_removed: 0,
+            opportunities_removed: 0,
+            projects_removed: 0,
+            tasks_removed: 0,
+            attendees_removed: 0,
+            events_removed: 0,
+            journals_removed: 0,
+            accounts_removed: 0,
+            products_removed: 0,
+            stock_locations_removed: 0,
+            warehouses_removed: 0,
+            employees_removed: 0,
+            departments_removed: 0,
+            logs_and_attachments: 0,
+            total_records_removed: 0,
+        };
+        assert_eq!(summary.total_records_removed, 0);
+    }
+
+    #[test]
+    fn test_deep_cleanup_options_serialize_roundtrip() {
+        let options = DeepCleanupOptions {
+            dry_run: Some(true),
+            keep_company_defaults: Some(true),
+            keep_user_accounts: Some(false),
+            keep_menus: None,
+            keep_groups: Some(true),
+        };
+        let json = serde_json::to_string(&options).unwrap();
+        let parsed: DeepCleanupOptions = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.dry_run, Some(true));
+        assert_eq!(parsed.keep_company_defaults, Some(true));
+        assert_eq!(parsed.keep_user_accounts, Some(false));
+        assert!(parsed.keep_menus.is_none());
+        assert_eq!(parsed.keep_groups, Some(true));
+    }
+}
