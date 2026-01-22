@@ -39,7 +39,7 @@ impl ServerCompat {
                 }
                 Message::Notification(notification) => match notification.method.as_str() {
                     "exit" => break,
-                    "initialized" => {
+                    "initialized" | "notifications/initialized" => {
                         *self.initialized.write().await = true;
                     }
                     _ => {}
