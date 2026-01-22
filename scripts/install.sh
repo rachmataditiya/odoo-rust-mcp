@@ -6,9 +6,16 @@ set -e
 # Run from extracted release directory: ./install.sh [install|uninstall|service|service-uninstall]
 
 BINARY_NAME="rust-mcp"
-INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/usr/local/share/odoo-rust-mcp"
-ENV_FILE="/etc/odoo-rust-mcp.env"
+# Support custom PREFIX for testing (e.g., PREFIX=$HOME/.local ./install.sh)
+PREFIX="${PREFIX:-/usr/local}"
+INSTALL_DIR="${PREFIX}/bin"
+CONFIG_DIR="${PREFIX}/share/odoo-rust-mcp"
+ENV_FILE="${PREFIX}/etc/odoo-rust-mcp.env"
+# Determine if we need sudo
+NEED_SUDO=""
+if [ "$PREFIX" = "/usr/local" ] || [ "$PREFIX" = "/usr" ]; then
+    NEED_SUDO="sudo"
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -42,18 +49,18 @@ install() {
     fi
 
     info "Installing binary to $INSTALL_DIR..."
-    sudo mkdir -p "$INSTALL_DIR"
-    sudo cp "$SCRIPT_DIR/$BINARY_NAME" "$INSTALL_DIR/" || error "Failed to copy binary"
-    sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    $NEED_SUDO mkdir -p "$INSTALL_DIR"
+    $NEED_SUDO cp "$SCRIPT_DIR/$BINARY_NAME" "$INSTALL_DIR/" || error "Failed to copy binary"
+    $NEED_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
 
     info "Installing config files to $CONFIG_DIR..."
-    sudo mkdir -p "$CONFIG_DIR"
+    $NEED_SUDO mkdir -p "$CONFIG_DIR"
     if [ -d "$SCRIPT_DIR/config" ]; then
-        sudo cp -r "$SCRIPT_DIR/config/"* "$CONFIG_DIR/" || warn "Failed to copy config files"
+        $NEED_SUDO cp -r "$SCRIPT_DIR/config/"* "$CONFIG_DIR/" || warn "Failed to copy config files"
     fi
 
     if [ -f "$SCRIPT_DIR/.env.example" ]; then
-        sudo cp "$SCRIPT_DIR/.env.example" "$CONFIG_DIR/" || warn "Failed to copy .env.example"
+        $NEED_SUDO cp "$SCRIPT_DIR/.env.example" "$CONFIG_DIR/" || warn "Failed to copy .env.example"
     fi
 
     info "Installation complete!"
@@ -77,24 +84,32 @@ uninstall() {
     service_uninstall 2>/dev/null || true
 
     if [ -f "$INSTALL_DIR/$BINARY_NAME" ]; then
-        sudo rm -f "$INSTALL_DIR/$BINARY_NAME"
+        $NEED_SUDO rm -f "$INSTALL_DIR/$BINARY_NAME"
         info "Removed $INSTALL_DIR/$BINARY_NAME"
     fi
 
     if [ -d "$CONFIG_DIR" ]; then
-        read -p "Remove config directory $CONFIG_DIR? [y/N] " -n 1 -r
-        echo
+        if [ -t 0 ]; then
+            read -p "Remove config directory $CONFIG_DIR? [y/N] " -n 1 -r
+            echo
+        else
+            REPLY="y"  # Non-interactive: auto-remove
+        fi
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            sudo rm -rf "$CONFIG_DIR"
+            $NEED_SUDO rm -rf "$CONFIG_DIR"
             info "Removed $CONFIG_DIR"
         fi
     fi
 
     if [ -f "$ENV_FILE" ]; then
-        read -p "Remove environment file $ENV_FILE? [y/N] " -n 1 -r
-        echo
+        if [ -t 0 ]; then
+            read -p "Remove environment file $ENV_FILE? [y/N] " -n 1 -r
+            echo
+        else
+            REPLY="y"  # Non-interactive: auto-remove
+        fi
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            sudo rm -f "$ENV_FILE"
+            $NEED_SUDO rm -f "$ENV_FILE"
             info "Removed $ENV_FILE"
         fi
     fi
