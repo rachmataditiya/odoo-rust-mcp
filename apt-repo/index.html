@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odoo Rust MCP - APT Repository</title>
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #5b21b6;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --code-bg: #0d1117;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card h2 .icon {
+            font-size: 1.25rem;
+        }
+        
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+        
+        code {
+            color: #e879f9;
+        }
+        
+        .comment {
+            color: #6b7280;
+        }
+        
+        .steps {
+            list-style: none;
+            counter-reset: step;
+        }
+        
+        .steps li {
+            counter-increment: step;
+            margin-bottom: 1.5rem;
+            padding-left: 3rem;
+            position: relative;
+        }
+        
+        .steps li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2rem;
+            height: 2rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .steps li h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .steps li p {
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .feature {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .feature .icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .feature p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        
+        .links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-card);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+            color: var(--text-muted);
+        }
+        
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--border);
+            border: none;
+            color: var(--text-muted);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        
+        .copy-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .code-block {
+            position: relative;
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.75rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🦀</div>
+            <h1>Odoo Rust MCP</h1>
+            <p class="subtitle">Model Context Protocol Server for Odoo Integration</p>
+            <span class="badge">APT Repository</span>
+        </header>
+        
+        <div class="card">
+            <h2><span class="icon">⚡</span> Quick Install</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                Install rust-mcp on Debian/Ubuntu with a single command:
+            </p>
+            <div class="code-block">
+                <pre><code><span class="comment"># Add GPG key and repository, then install</span>
+curl -fsSL https://rachmataditiya.github.io/odoo-rust-mcp/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/rust-mcp.gpg
+echo "deb [signed-by=/usr/share/keyrings/rust-mcp.gpg] https://rachmataditiya.github.io/odoo-rust-mcp stable main" | sudo tee /etc/apt/sources.list.d/rust-mcp.list
+sudo apt update && sudo apt install rust-mcp</code></pre>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2><span class="icon">📋</span> Step by Step</h2>
+            <ol class="steps">
+                <li>
+                    <h3>Add GPG Key</h3>
+                    <p>Import the repository signing key</p>
+                    <pre><code>curl -fsSL https://rachmataditiya.github.io/odoo-rust-mcp/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/rust-mcp.gpg</code></pre>
+                </li>
+                <li>
+                    <h3>Add Repository</h3>
+                    <p>Add the APT repository to your sources</p>
+                    <pre><code>echo "deb [signed-by=/usr/share/keyrings/rust-mcp.gpg] https://rachmataditiya.github.io/odoo-rust-mcp stable main" | sudo tee /etc/apt/sources.list.d/rust-mcp.list</code></pre>
+                </li>
+                <li>
+                    <h3>Install Package</h3>
+                    <p>Update and install rust-mcp</p>
+                    <pre><code>sudo apt update
+sudo apt install rust-mcp</code></pre>
+                </li>
+                <li>
+                    <h3>Configure</h3>
+                    <p>Edit the configuration file with your Odoo credentials</p>
+                    <pre><code>nano ~/.config/rust-mcp/env</code></pre>
+                </li>
+                <li>
+                    <h3>Start Service</h3>
+                    <p>Enable and start the MCP server</p>
+                    <pre><code>sudo systemctl enable rust-mcp
+sudo systemctl start rust-mcp</code></pre>
+                </li>
+            </ol>
+        </div>
+        
+        <div class="card">
+            <h2><span class="icon">✨</span> Features</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="icon">🔌</div>
+                    <h4>Multiple Transports</h4>
+                    <p>stdio, HTTP, SSE, WebSocket</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">🏢</div>
+                    <h4>Multi-Instance</h4>
+                    <p>Connect to multiple Odoo servers</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">🔐</div>
+                    <h4>Secure Auth</h4>
+                    <p>API Key & Username/Password</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">📊</div>
+                    <h4>Full API Access</h4>
+                    <p>CRUD, Reports, Workflows</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2><span class="icon">🔗</span> Links</h2>
+            <div class="links">
+                <a href="https://github.com/rachmataditiya/odoo-rust-mcp" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    GitHub Repository
+                </a>
+                <a href="https://github.com/rachmataditiya/odoo-rust-mcp/releases" class="btn btn-secondary">
+                    📦 Releases
+                </a>
+                <a href="pubkey.gpg" class="btn btn-secondary">
+                    🔑 GPG Public Key
+                </a>
+            </div>
+        </div>
+        
+        <footer>
+            <p>
+                Made with ❤️ by <a href="https://github.com/rachmataditiya">Rachmat Aditiya</a>
+            </p>
+            <p style="margin-top: 0.5rem; font-size: 0.875rem;">
+                © 2024-2026 · MIT License
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -31,7 +31,7 @@ uuid = { version = "1.19.0", features = ["v4"] }
 async-stream = "0.3"
 
 [package.metadata.deb]
-maintainer = "Rachmat Aditiya <rachmataditiya@gmail.com>"
+maintainer = "Rachmat Aditiya <radit@arkana.co.id>"
 copyright = "2024-2026, Rachmat Aditiya"
 license-file = ["../LICENSE", "0"]
 extended-description = """Odoo MCP Server - Model Context Protocol server for Odoo integration.
