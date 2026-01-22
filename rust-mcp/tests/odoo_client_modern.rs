@@ -7,8 +7,7 @@ use rust_mcp::odoo::client::OdooHttpClient;
 use rust_mcp::odoo::config::OdooInstanceConfig;
 use serde_json::json;
 use std::collections::HashMap;
-use std::time::Duration;
-use wiremock::matchers::{body_json, header, method, path_regex};
+use wiremock::matchers::{header, method, path_regex};
 use wiremock::{Mock, ResponseTemplate};
 
 fn create_config(url: &str) -> OdooInstanceConfig {

@@ -6,7 +6,6 @@ use rust_mcp::odoo::config::OdooInstanceConfig;
 use rust_mcp::odoo::legacy_client::OdooLegacyClient;
 use serde_json::json;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, Respond, ResponseTemplate};
