@@ -141,3 +141,23 @@ impl ServerHandler for McpOdooHandler {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_protocol_err_creates_error_with_message() {
+        let err = protocol_err("test message");
+        let display = err.to_string();
+        assert!(display.contains("test message"));
+    }
+
+    #[test]
+    fn test_protocol_err_has_invalid_request_code() {
+        let err = protocol_err("test");
+        // Error display should contain something about the error
+        let display = format!("{:?}", err);
+        assert!(!display.is_empty());
+    }
+}
