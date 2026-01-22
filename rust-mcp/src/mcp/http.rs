@@ -1,23 +1,23 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use std::convert::Infallible;
 
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
-use axum::response::sse::{Event, Sse};
 use axum::response::IntoResponse;
+use axum::response::sse::{Event, Sse};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use mcp_rust_sdk::error::{Error as McpError, ErrorCode};
 use mcp_rust_sdk::protocol::{RequestId, Response};
 use mcp_rust_sdk::server::ServerHandler;
 use serde::Deserialize;
-use serde_json::{json, Value};
-use tokio::sync::{broadcast, Mutex};
+use serde_json::{Value, json};
+use tokio::sync::{Mutex, broadcast};
 use tokio_stream::wrappers::{BroadcastStream, IntervalStream};
-use tokio_stream::{iter, StreamExt};
+use tokio_stream::{StreamExt, iter};
 use tower_http::cors::CorsLayer;
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -42,7 +42,9 @@ pub struct AuthConfig {
 impl AuthConfig {
     /// Load auth config from environment variables
     pub fn from_env() -> Self {
-        let bearer_token = std::env::var("MCP_AUTH_TOKEN").ok().filter(|s| !s.is_empty());
+        let bearer_token = std::env::var("MCP_AUTH_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty());
         if bearer_token.is_some() {
             info!("MCP HTTP authentication enabled (Bearer token)");
         } else {
@@ -138,7 +140,9 @@ async fn handle_jsonrpc(
     session_id: Option<String>,
     v: Value,
 ) -> Result<(Option<String>, Option<Value>, StatusCode), (StatusCode, Value)> {
-    let obj = v.as_object().ok_or((StatusCode::BAD_REQUEST, json!({"error":"expected object"})))?;
+    let obj = v
+        .as_object()
+        .ok_or((StatusCode::BAD_REQUEST, json!({"error":"expected object"})))?;
     let method = obj
         .get("method")
         .and_then(|m| m.as_str())
@@ -152,7 +156,10 @@ async fn handle_jsonrpc(
     // Streamable HTTP sessions: create on initialize, otherwise accept without requiring.
     let effective_session = session_id;
     if method == "initialize" {
-        let id_val = id_val.ok_or((StatusCode::BAD_REQUEST, json!({"error":"initialize requires id"})))?;
+        let id_val = id_val.ok_or((
+            StatusCode::BAD_REQUEST,
+            json!({"error":"initialize requires id"}),
+        ))?;
         let id: RequestId = serde_json::from_value(id_val)
             .map_err(|e| (StatusCode::BAD_REQUEST, json!({"error": e.to_string()})))?;
         let params = params.unwrap_or_else(|| json!({}));
@@ -166,7 +173,7 @@ async fn handle_jsonrpc(
             server_name,
             instructions,
         )
-            .map_err(|e| (StatusCode::BAD_REQUEST, json!({"error": e.to_string()})))?;
+        .map_err(|e| (StatusCode::BAD_REQUEST, json!({"error": e.to_string()})))?;
 
         let sess = Uuid::new_v4().to_string();
         state
@@ -182,33 +189,44 @@ async fn handle_jsonrpc(
             .or_insert_with(|| broadcast::channel(256).0);
 
         let resp = Response::success(id, Some(result));
-        return Ok((Some(sess), Some(serde_json::to_value(resp).unwrap()), StatusCode::OK));
+        return Ok((
+            Some(sess),
+            Some(serde_json::to_value(resp).unwrap()),
+            StatusCode::OK,
+        ));
     }
 
     // initialized notification toggles gating for the session (if provided)
     if method == "initialized" {
-        if let Some(sess) = &effective_session {
-            if let Some(st) = state.sessions.lock().await.get_mut(sess) {
-                st.initialized = true;
-            }
+        if let Some(sess) = &effective_session
+            && let Some(st) = state.sessions.lock().await.get_mut(sess)
+        {
+            st.initialized = true;
         }
         return Ok((None, None, StatusCode::ACCEPTED));
     }
 
     // For other methods, if we have a known session and it's not initialized, reject.
-    if let Some(sess) = &effective_session {
-        if let Some(st) = state.sessions.lock().await.get(sess) {
-            if !st.initialized {
-                // Cursor typically sends initialized quickly; if not, still allow read-only ops?
-                // We'll follow MCP gating to match stdio behavior.
-                let id = id_val
-                    .clone()
-                    .and_then(|x| serde_json::from_value::<RequestId>(x).ok())
-                    .unwrap_or(RequestId::String("unknown".to_string()));
-                let resp = jsonrpc_err(id, ErrorCode::ServerNotInitialized, "Server not initialized");
-                return Ok((None, Some(serde_json::to_value(resp).unwrap()), StatusCode::OK));
-            }
-        }
+    if let Some(sess) = &effective_session
+        && let Some(st) = state.sessions.lock().await.get(sess)
+        && !st.initialized
+    {
+        // Cursor typically sends initialized quickly; if not, still allow read-only ops?
+        // We'll follow MCP gating to match stdio behavior.
+        let id = id_val
+            .clone()
+            .and_then(|x| serde_json::from_value::<RequestId>(x).ok())
+            .unwrap_or(RequestId::String("unknown".to_string()));
+        let resp = jsonrpc_err(
+            id,
+            ErrorCode::ServerNotInitialized,
+            "Server not initialized",
+        );
+        return Ok((
+            None,
+            Some(serde_json::to_value(resp).unwrap()),
+            StatusCode::OK,
+        ));
     }
 
     // Notifications: best-effort handle_method, return 202.
@@ -224,9 +242,18 @@ async fn handle_jsonrpc(
         .handler
         .handle_method(&method, params)
         .await
-        .map_err(|e| (StatusCode::OK, jsonrpc_err(id.clone(), ErrorCode::InternalError, e.to_string()).to_value()))?;
+        .map_err(|e| {
+            (
+                StatusCode::OK,
+                jsonrpc_err(id.clone(), ErrorCode::InternalError, e.to_string()).to_value(),
+            )
+        })?;
     let resp = Response::success(id, Some(result));
-    Ok((None, Some(serde_json::to_value(resp).unwrap()), StatusCode::OK))
+    Ok((
+        None,
+        Some(serde_json::to_value(resp).unwrap()),
+        StatusCode::OK,
+    ))
 }
 
 /// Validate Bearer token authentication
@@ -236,9 +263,7 @@ fn validate_auth(headers: &HeaderMap, auth: &AuthConfig) -> Result<(), (StatusCo
         return Ok(());
     };
 
-    let auth_header = headers
-        .get(&AUTHORIZATION)
-        .and_then(|v| v.to_str().ok());
+    let auth_header = headers.get(&AUTHORIZATION).and_then(|v| v.to_str().ok());
 
     match auth_header {
         Some(header) if header.starts_with("Bearer ") => {
@@ -333,7 +358,9 @@ async fn mcp_get(State(state): State<AppState>, headers: HeaderMap) -> axum::res
         Err(_) => None,
     });
 
-    Sse::new(keepalive.merge(stream)).keep_alive(axum::response::sse::KeepAlive::default()).into_response()
+    Sse::new(keepalive.merge(stream))
+        .keep_alive(axum::response::sse::KeepAlive::default())
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -399,10 +426,10 @@ async fn legacy_messages(
         Err((_sc, _v)) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    if let (Some(sess), Some(resp)) = (session, maybe_resp) {
-        if let Some(tx) = state.sse_channels.lock().await.get(&sess).cloned() {
-            let _ = tx.send(resp);
-        }
+    if let (Some(sess), Some(resp)) = (session, maybe_resp)
+        && let Some(tx) = state.sse_channels.lock().await.get(&sess).cloned()
+    {
+        let _ = tx.send(resp);
     }
 
     StatusCode::ACCEPTED.into_response()
@@ -417,4 +444,3 @@ impl ResponseExt for Response {
         serde_json::to_value(self).unwrap_or_else(|_| json!({}))
     }
 }
-

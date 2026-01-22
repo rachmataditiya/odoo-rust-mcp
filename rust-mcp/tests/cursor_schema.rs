@@ -40,4 +40,3 @@ fn cursor_can_parse_tool_schemas() {
         walk(schema);
     }
 }
-

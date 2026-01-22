@@ -251,10 +251,14 @@ impl Registry {
         // Validate and build maps.
         let mut tool_by_name = HashMap::new();
         for t in &tools {
-            validate_cursor_schema(&t.input_schema)
-                .map_err(|e| anyhow::anyhow!("tools.json tool '{}' has invalid inputSchema: {e}", t.name))?;
+            validate_cursor_schema(&t.input_schema).map_err(|e| {
+                anyhow::anyhow!("tools.json tool '{}' has invalid inputSchema: {e}", t.name)
+            })?;
             if tool_by_name.insert(t.name.clone(), t.clone()).is_some() {
-                return Err(anyhow::anyhow!("Duplicate tool name in tools.json: {}", t.name));
+                return Err(anyhow::anyhow!(
+                    "Duplicate tool name in tools.json: {}",
+                    t.name
+                ));
             }
         }
 
@@ -262,7 +266,10 @@ impl Registry {
         let mut prompt_order = Vec::new();
         for p in prompts {
             if prompts_by_name.insert(p.name.clone(), p.clone()).is_some() {
-                return Err(anyhow::anyhow!("Duplicate prompt name in prompts.json: {}", p.name));
+                return Err(anyhow::anyhow!(
+                    "Duplicate prompt name in prompts.json: {}",
+                    p.name
+                ));
             }
             prompt_order.push(p.name.clone());
         }
@@ -307,17 +314,19 @@ fn env_truthy(var: &str) -> bool {
 }
 
 fn parent_dir_or_current(path: &Path) -> PathBuf {
-    path.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."))
+    path.parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 fn ensure_file_exists_with_seed(path: &Path, seed_contents: &str) -> anyhow::Result<()> {
     if path.exists() {
         return Ok(());
     }
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
     std::fs::write(path, seed_contents)?;
     info!(path = %path.display(), "created default config file");
@@ -358,10 +367,8 @@ fn validate_cursor_schema(schema: &Value) -> anyhow::Result<()> {
                     ) {
                         return Err(anyhow::anyhow!("schema contains forbidden key '{k}'"));
                     }
-                    if k == "type" {
-                        if vv.is_array() {
-                            return Err(anyhow::anyhow!("schema contains type array"));
-                        }
+                    if k == "type" && vv.is_array() {
+                        return Err(anyhow::anyhow!("schema contains type array"));
                     }
                     walk(vv)?;
                 }

@@ -103,7 +103,11 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
-                .filter_map(|t| t.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+                .filter_map(|t| {
+                    t.get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|s| s.to_string())
+                })
                 .collect()
         })
         .unwrap_or_default();
@@ -143,7 +147,8 @@ async fn main() -> anyhow::Result<()> {
         }
         other => anyhow::bail!("expected odoo_count response, got: {other:?}"),
     };
-    let count_json: serde_json::Value = serde_json::from_str(&count_text).unwrap_or_else(|_| json!({ "raw": count_text }));
+    let count_json: serde_json::Value =
+        serde_json::from_str(&count_text).unwrap_or_else(|_| json!({ "raw": count_text }));
     println!("odoo_count result: {}", count_json);
 
     // tools/call: odoo_search_read (small sample)
@@ -180,7 +185,8 @@ async fn main() -> anyhow::Result<()> {
         }
         other => anyhow::bail!("expected odoo_search_read response, got: {other:?}"),
     };
-    let sr_json: serde_json::Value = serde_json::from_str(&sr_text).unwrap_or_else(|_| json!({ "raw": sr_text }));
+    let sr_json: serde_json::Value =
+        serde_json::from_str(&sr_text).unwrap_or_else(|_| json!({ "raw": sr_text }));
     let records = sr_json.get("records").cloned().unwrap_or(json!([]));
     let count = sr_json.get("count").cloned().unwrap_or(json!(null));
     println!("odoo_search_read count: {count}");
@@ -204,16 +210,23 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
-                .filter_map(|p| p.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+                .filter_map(|p| {
+                    p.get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|s| s.to_string())
+                })
                 .collect()
         })
         .unwrap_or_default();
     println!("prompts/list: {}", prompt_names.join(", "));
 
     // exit
-    send(&mut ws, McpMessage::Notification(Notification::new("exit", None))).await?;
+    send(
+        &mut ws,
+        McpMessage::Notification(Notification::new("exit", None)),
+    )
+    .await?;
     let _ = ws.close(None).await;
 
     Ok(())
 }
-

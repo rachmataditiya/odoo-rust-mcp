@@ -156,11 +156,7 @@ impl OdooClient {
         }
     }
 
-    pub async fn download_report_pdf(
-        &self,
-        report_name: &str,
-        ids: &[i64],
-    ) -> OdooResult<Vec<u8>> {
+    pub async fn download_report_pdf(&self, report_name: &str, ids: &[i64]) -> OdooResult<Vec<u8>> {
         match self {
             OdooClient::Modern(c) => c.download_report_pdf(report_name, ids).await,
             OdooClient::Legacy(c) => c.download_report_pdf(report_name, ids).await,
@@ -181,10 +177,16 @@ impl OdooClient {
     ) -> OdooResult<Value> {
         match self {
             OdooClient::Modern(c) => {
-                c.read_group(model, domain, fields, groupby, offset, limit, orderby, lazy, context).await
+                c.read_group(
+                    model, domain, fields, groupby, offset, limit, orderby, lazy, context,
+                )
+                .await
             }
             OdooClient::Legacy(c) => {
-                c.read_group(model, domain, fields, groupby, offset, limit, orderby, lazy, context).await
+                c.read_group(
+                    model, domain, fields, groupby, offset, limit, orderby, lazy, context,
+                )
+                .await
             }
         }
     }
@@ -199,8 +201,14 @@ impl OdooClient {
         context: Option<Value>,
     ) -> OdooResult<Value> {
         match self {
-            OdooClient::Modern(c) => c.name_search(model, name, args, operator, limit, context).await,
-            OdooClient::Legacy(c) => c.name_search(model, name, args, operator, limit, context).await,
+            OdooClient::Modern(c) => {
+                c.name_search(model, name, args, operator, limit, context)
+                    .await
+            }
+            OdooClient::Legacy(c) => {
+                c.name_search(model, name, args, operator, limit, context)
+                    .await
+            }
         }
     }
 
@@ -251,8 +259,14 @@ impl OdooClient {
         context: Option<Value>,
     ) -> OdooResult<Value> {
         match self {
-            OdooClient::Modern(c) => c.onchange(model, ids, values, field_name, field_onchange, context).await,
-            OdooClient::Legacy(c) => c.onchange(model, ids, values, field_name, field_onchange, context).await,
+            OdooClient::Modern(c) => {
+                c.onchange(model, ids, values, field_name, field_onchange, context)
+                    .await
+            }
+            OdooClient::Legacy(c) => {
+                c.onchange(model, ids, values, field_name, field_onchange, context)
+                    .await
+            }
         }
     }
 }

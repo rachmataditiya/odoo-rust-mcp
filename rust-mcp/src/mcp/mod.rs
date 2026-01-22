@@ -1,21 +1,21 @@
+pub mod cursor_stdio;
+pub mod http;
 pub mod prompts;
 pub mod registry;
 pub mod runtime;
 pub mod tools;
-pub mod cursor_stdio;
-pub mod http;
 
-use std::collections::HashMap;
-use std::sync::Arc;
 use async_trait::async_trait;
 use mcp_rust_sdk::error::{Error, ErrorCode};
 use mcp_rust_sdk::server::ServerHandler;
 use mcp_rust_sdk::types::{ClientCapabilities, Implementation, ServerCapabilities};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::mcp::prompts::{get_prompt_result, list_prompts_result};
 use crate::mcp::registry::Registry;
-use crate::mcp::tools::{call_tool, OdooClientPool};
+use crate::mcp::tools::{OdooClientPool, call_tool};
 
 #[derive(Clone)]
 pub struct McpOdooHandler {
@@ -25,10 +25,7 @@ pub struct McpOdooHandler {
 
 impl McpOdooHandler {
     pub fn new(pool: OdooClientPool, registry: Arc<Registry>) -> Self {
-        Self {
-            pool,
-            registry,
-        }
+        Self { pool, registry }
     }
 
     pub fn instance_names(&self) -> Vec<String> {
@@ -90,7 +87,10 @@ impl ServerHandler for McpOdooHandler {
                     .get("name")
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| protocol_err("tools/call missing 'name'"))?;
-                let args = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+                let args = params
+                    .get("arguments")
+                    .cloned()
+                    .unwrap_or_else(|| json!({}));
 
                 let Some(tool) = self.registry.get_tool(name).await else {
                     return Ok(json!({
@@ -124,7 +124,8 @@ impl ServerHandler for McpOdooHandler {
                 Ok(list_prompts_result(&prompts))
             }
             "prompts/get" => {
-                let params = params.ok_or_else(|| protocol_err("Missing params for prompts/get"))?;
+                let params =
+                    params.ok_or_else(|| protocol_err("Missing params for prompts/get"))?;
                 let name = params
                     .get("name")
                     .and_then(|v| v.as_str())
@@ -140,4 +141,3 @@ impl ServerHandler for McpOdooHandler {
         }
     }
 }
-

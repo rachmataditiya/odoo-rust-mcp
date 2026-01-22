@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
-use serde_json::{json, Value};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
+use serde_json::{Value, json};
 use url::Url;
 
 use super::config::OdooInstanceConfig;
@@ -58,18 +58,15 @@ impl OdooHttpClient {
             CONTENT_TYPE,
             HeaderValue::from_static("application/json; charset=utf-8"),
         );
-        headers.insert(
-            USER_AGENT,
-            HeaderValue::from_static("odoo-mcp-rust/0.1"),
-        );
-        if let Some(db) = &self.db {
-            if !db.trim().is_empty() {
-                headers.insert(
-                    "X-Odoo-Database",
-                    HeaderValue::from_str(db)
-                        .map_err(|e| anyhow::anyhow!("Invalid X-Odoo-Database header: {e}"))?,
-                );
-            }
+        headers.insert(USER_AGENT, HeaderValue::from_static("odoo-mcp-rust/0.1"));
+        if let Some(db) = &self.db
+            && !db.trim().is_empty()
+        {
+            headers.insert(
+                "X-Odoo-Database",
+                HeaderValue::from_str(db)
+                    .map_err(|e| anyhow::anyhow!("Invalid X-Odoo-Database header: {e}"))?,
+            );
         }
         Ok(headers)
     }
@@ -163,7 +160,12 @@ impl OdooHttpClient {
 
         let mut last_err: Option<OdooError> = None;
         for attempt in 0..=self.max_retries {
-            let resp = self.http.get(url.clone()).headers(headers.clone()).send().await;
+            let resp = self
+                .http
+                .get(url.clone())
+                .headers(headers.clone())
+                .send()
+                .await;
             match resp {
                 Ok(r) => {
                     let status = r.status();
@@ -320,23 +322,31 @@ impl OdooHttpClient {
             body["context"] = ctx;
         }
         let v = self.post_json2_raw(model, "write", body).await?;
-        serde_json::from_value(v).map_err(|e| {
-            OdooError::InvalidResponse(format!("Expected boolean from write: {e}"))
-        })
+        serde_json::from_value(v)
+            .map_err(|e| OdooError::InvalidResponse(format!("Expected boolean from write: {e}")))
     }
 
-    pub async fn unlink(&self, model: &str, ids: Vec<i64>, context: Option<Value>) -> OdooResult<bool> {
+    pub async fn unlink(
+        &self,
+        model: &str,
+        ids: Vec<i64>,
+        context: Option<Value>,
+    ) -> OdooResult<bool> {
         let mut body = json!({ "ids": ids });
         if let Some(ctx) = context {
             body["context"] = ctx;
         }
         let v = self.post_json2_raw(model, "unlink", body).await?;
-        serde_json::from_value(v).map_err(|e| {
-            OdooError::InvalidResponse(format!("Expected boolean from unlink: {e}"))
-        })
+        serde_json::from_value(v)
+            .map_err(|e| OdooError::InvalidResponse(format!("Expected boolean from unlink: {e}")))
     }
 
-    pub async fn search_count(&self, model: &str, domain: Option<Value>, context: Option<Value>) -> OdooResult<i64> {
+    pub async fn search_count(
+        &self,
+        model: &str,
+        domain: Option<Value>,
+        context: Option<Value>,
+    ) -> OdooResult<i64> {
         let mut body = json!({});
         if let Some(ctx) = context {
             body["context"] = ctx;
@@ -488,9 +498,8 @@ impl OdooHttpClient {
             body["default"] = d;
         }
         let v = self.post_json2_raw(model, "copy", body).await?;
-        serde_json::from_value(v).map_err(|e| {
-            OdooError::InvalidResponse(format!("Expected id from copy: {e}"))
-        })
+        serde_json::from_value(v)
+            .map_err(|e| OdooError::InvalidResponse(format!("Expected id from copy: {e}")))
     }
 
     /// onchange - Simulate form onchange behavior
@@ -515,4 +524,3 @@ impl OdooHttpClient {
         self.post_json2_raw(model, "onchange", body).await
     }
 }
-

@@ -112,10 +112,9 @@ fn parse_jsonrpc_value(v: serde_json::Value) -> Result<Message, Error> {
 #[async_trait]
 impl Transport for CursorStdioTransport {
     async fn send(&self, message: Message) -> Result<(), Error> {
-        let mut stdout = self
-            .stdout
-            .lock()
-            .map_err(|_| Error::protocol(ErrorCode::InternalError, "Failed to acquire stdout lock"))?;
+        let mut stdout = self.stdout.lock().map_err(|_| {
+            Error::protocol(ErrorCode::InternalError, "Failed to acquire stdout lock")
+        })?;
 
         // Emit plain JSON-RPC (Cursor-friendly).
         let json = match message {
@@ -142,4 +141,3 @@ impl Transport for CursorStdioTransport {
         Ok(())
     }
 }
-

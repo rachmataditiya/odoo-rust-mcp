@@ -10,7 +10,9 @@ use mcp_rust_sdk::{
     transport::{Message, Transport},
 };
 
-use rust_mcp::mcp::{registry::Registry, runtime::ServerCompat, tools::OdooClientPool, McpOdooHandler};
+use rust_mcp::mcp::{
+    McpOdooHandler, registry::Registry, runtime::ServerCompat, tools::OdooClientPool,
+};
 use uuid::Uuid;
 
 struct MockTransport {
@@ -19,8 +21,7 @@ struct MockTransport {
 }
 
 impl MockTransport {
-    fn new(
-    ) -> (
+    fn new() -> (
         Self,
         mpsc::UnboundedSender<Result<Message, Error>>,
         broadcast::Receiver<Result<Message, Error>>,
@@ -74,12 +75,18 @@ async fn mcp_initialize_and_list_tools_prompts() {
     // Use temp config paths so tests don't depend on repo files.
     let tmp = std::env::temp_dir().join(format!("odoo-rust-mcp-test-{}", Uuid::new_v4()));
     unsafe {
-        std::env::set_var("MCP_TOOLS_JSON", tmp.join("tools.json").to_string_lossy().to_string());
+        std::env::set_var(
+            "MCP_TOOLS_JSON",
+            tmp.join("tools.json").to_string_lossy().to_string(),
+        );
         std::env::set_var(
             "MCP_PROMPTS_JSON",
             tmp.join("prompts.json").to_string_lossy().to_string(),
         );
-        std::env::set_var("MCP_SERVER_JSON", tmp.join("server.json").to_string_lossy().to_string());
+        std::env::set_var(
+            "MCP_SERVER_JSON",
+            tmp.join("server.json").to_string_lossy().to_string(),
+        );
     }
 
     let pool = OdooClientPool::from_env().unwrap();
@@ -123,12 +130,19 @@ async fn mcp_initialize_and_list_tools_prompts() {
 
     // send initialized notification
     client_tx
-        .send(Ok(Message::Notification(Notification::new("initialized", None))))
+        .send(Ok(Message::Notification(Notification::new(
+            "initialized",
+            None,
+        ))))
         .unwrap();
     tokio::time::sleep(Duration::from_millis(20)).await;
 
     // tools/list
-    let list_tools = Request::new("tools/list", Some(serde_json::json!({})), RequestId::Number(2));
+    let list_tools = Request::new(
+        "tools/list",
+        Some(serde_json::json!({})),
+        RequestId::Number(2),
+    );
     client_tx.send(Ok(Message::Request(list_tools))).unwrap();
     let resp = tokio::time::timeout(Duration::from_secs(2), client_rx.recv())
         .await
@@ -145,8 +159,11 @@ async fn mcp_initialize_and_list_tools_prompts() {
     }
 
     // prompts/list
-    let list_prompts =
-        Request::new("prompts/list", Some(serde_json::json!({})), RequestId::Number(3));
+    let list_prompts = Request::new(
+        "prompts/list",
+        Some(serde_json::json!({})),
+        RequestId::Number(3),
+    );
     client_tx.send(Ok(Message::Request(list_prompts))).unwrap();
     let resp = tokio::time::timeout(Duration::from_secs(2), client_rx.recv())
         .await
@@ -168,4 +185,3 @@ async fn mcp_initialize_and_list_tools_prompts() {
         .unwrap();
     let _ = tokio::time::timeout(Duration::from_secs(2), server_handle).await;
 }
-

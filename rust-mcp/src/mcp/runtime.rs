@@ -37,15 +37,13 @@ impl ServerCompat {
                     };
                     self.transport.send(Message::Response(response)).await?;
                 }
-                Message::Notification(notification) => {
-                    match notification.method.as_str() {
-                        "exit" => break,
-                        "initialized" => {
-                            *self.initialized.write().await = true;
-                        }
-                        _ => {}
+                Message::Notification(notification) => match notification.method.as_str() {
+                    "exit" => break,
+                    "initialized" => {
+                        *self.initialized.write().await = true;
                     }
-                }
+                    _ => {}
+                },
                 Message::Response(_) => {
                     return Err(Error::protocol(
                         ErrorCode::InvalidRequest,
@@ -126,10 +124,12 @@ impl ServerCompat {
                         "Server not initialized",
                     ));
                 }
-                let result = self.handler.handle_method(&request.method, request.params).await?;
+                let result = self
+                    .handler
+                    .handle_method(&request.method, request.params)
+                    .await?;
                 Ok(Response::success(request.id, Some(result)))
             }
         }
     }
 }
-

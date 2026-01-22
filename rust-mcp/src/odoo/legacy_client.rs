@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, USER_AGENT};
-use serde_json::{json, Value};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
+use serde_json::{Value, json};
 use tokio::sync::RwLock;
 use url::Url;
 
@@ -31,18 +31,15 @@ impl OdooLegacyClient {
         base_url.set_query(None);
         base_url.set_fragment(None);
 
-        let db = cfg
-            .db
-            .clone()
-            .ok_or_else(|| anyhow::anyhow!("Missing db for legacy Odoo instance url={}", cfg.url))?;
-        let username = cfg
-            .username
-            .clone()
-            .ok_or_else(|| anyhow::anyhow!("Missing username for legacy Odoo instance url={}", cfg.url))?;
-        let password = cfg
-            .password
-            .clone()
-            .ok_or_else(|| anyhow::anyhow!("Missing password for legacy Odoo instance url={}", cfg.url))?;
+        let db = cfg.db.clone().ok_or_else(|| {
+            anyhow::anyhow!("Missing db for legacy Odoo instance url={}", cfg.url)
+        })?;
+        let username = cfg.username.clone().ok_or_else(|| {
+            anyhow::anyhow!("Missing username for legacy Odoo instance url={}", cfg.url)
+        })?;
+        let password = cfg.password.clone().ok_or_else(|| {
+            anyhow::anyhow!("Missing password for legacy Odoo instance url={}", cfg.url)
+        })?;
 
         let timeout = Duration::from_millis(cfg.timeout_ms.unwrap_or(30_000));
         let max_retries = cfg.max_retries.unwrap_or(3);
@@ -69,10 +66,7 @@ impl OdooLegacyClient {
             CONTENT_TYPE,
             HeaderValue::from_static("application/json; charset=utf-8"),
         );
-        headers.insert(
-            USER_AGENT,
-            HeaderValue::from_static("odoo-mcp-rust/0.1"),
-        );
+        headers.insert(USER_AGENT, HeaderValue::from_static("odoo-mcp-rust/0.1"));
         headers
     }
 
@@ -199,18 +193,22 @@ impl OdooLegacyClient {
         let args = json!([self.db, self.username, self.password, {}]);
         let result = self.jsonrpc_call("common", "authenticate", args).await?;
 
-        let uid = result.as_i64().ok_or_else(|| {
-            OdooError::Api {
-                status: 401,
-                message: format!("Authentication failed for user '{}'. Check username/password.", self.username),
-                body: None,
-            }
+        let uid = result.as_i64().ok_or_else(|| OdooError::Api {
+            status: 401,
+            message: format!(
+                "Authentication failed for user '{}'. Check username/password.",
+                self.username
+            ),
+            body: None,
         })?;
 
         if uid == 0 {
             return Err(OdooError::Api {
                 status: 401,
-                message: format!("Authentication failed for user '{}'. Invalid credentials.", self.username),
+                message: format!(
+                    "Authentication failed for user '{}'. Invalid credentials.",
+                    self.username
+                ),
                 body: None,
             });
         }
@@ -247,7 +245,8 @@ impl OdooLegacyClient {
             call_args.push(kw);
         }
 
-        self.jsonrpc_call("object", "execute_kw", json!(call_args)).await
+        self.jsonrpc_call("object", "execute_kw", json!(call_args))
+            .await
     }
 
     pub async fn search(
@@ -331,7 +330,9 @@ impl OdooLegacyClient {
         values: Value,
         _context: Option<Value>,
     ) -> OdooResult<i64> {
-        let result = self.execute_kw(model, "create", json!([values]), None).await?;
+        let result = self
+            .execute_kw(model, "create", json!([values]), None)
+            .await?;
         serde_json::from_value(result).map_err(|e| {
             OdooError::InvalidResponse(format!("Expected created id (number) from create: {e}"))
         })
@@ -344,22 +345,34 @@ impl OdooLegacyClient {
         values: Value,
         _context: Option<Value>,
     ) -> OdooResult<bool> {
-        let result = self.execute_kw(model, "write", json!([ids, values]), None).await?;
-        serde_json::from_value(result).map_err(|e| {
-            OdooError::InvalidResponse(format!("Expected boolean from write: {e}"))
-        })
+        let result = self
+            .execute_kw(model, "write", json!([ids, values]), None)
+            .await?;
+        serde_json::from_value(result)
+            .map_err(|e| OdooError::InvalidResponse(format!("Expected boolean from write: {e}")))
     }
 
-    pub async fn unlink(&self, model: &str, ids: Vec<i64>, _context: Option<Value>) -> OdooResult<bool> {
+    pub async fn unlink(
+        &self,
+        model: &str,
+        ids: Vec<i64>,
+        _context: Option<Value>,
+    ) -> OdooResult<bool> {
         let result = self.execute_kw(model, "unlink", json!([ids]), None).await?;
-        serde_json::from_value(result).map_err(|e| {
-            OdooError::InvalidResponse(format!("Expected boolean from unlink: {e}"))
-        })
+        serde_json::from_value(result)
+            .map_err(|e| OdooError::InvalidResponse(format!("Expected boolean from unlink: {e}")))
     }
 
-    pub async fn search_count(&self, model: &str, domain: Option<Value>, _context: Option<Value>) -> OdooResult<i64> {
+    pub async fn search_count(
+        &self,
+        model: &str,
+        domain: Option<Value>,
+        _context: Option<Value>,
+    ) -> OdooResult<i64> {
         let domain = domain.unwrap_or(json!([]));
-        let result = self.execute_kw(model, "search_count", json!([domain]), None).await?;
+        let result = self
+            .execute_kw(model, "search_count", json!([domain]), None)
+            .await?;
         serde_json::from_value(result).map_err(|e| {
             OdooError::InvalidResponse(format!("Expected count (number) from search_count: {e}"))
         })
@@ -559,7 +572,8 @@ impl OdooLegacyClient {
         fields_list: Vec<String>,
         _context: Option<Value>,
     ) -> OdooResult<Value> {
-        self.execute_kw(model, "default_get", json!([fields_list]), None).await
+        self.execute_kw(model, "default_get", json!([fields_list]), None)
+            .await
     }
 
     /// copy - Duplicate a record
@@ -570,15 +584,10 @@ impl OdooLegacyClient {
         default: Option<Value>,
         _context: Option<Value>,
     ) -> OdooResult<i64> {
-        let kwargs = if let Some(d) = default {
-            Some(json!({ "default": d }))
-        } else {
-            None
-        };
+        let kwargs = default.map(|d| json!({ "default": d }));
         let result = self.execute_kw(model, "copy", json!([id]), kwargs).await?;
-        serde_json::from_value(result).map_err(|e| {
-            OdooError::InvalidResponse(format!("Expected id from copy: {e}"))
-        })
+        serde_json::from_value(result)
+            .map_err(|e| OdooError::InvalidResponse(format!("Expected id from copy: {e}")))
     }
 
     /// onchange - Simulate form onchange behavior

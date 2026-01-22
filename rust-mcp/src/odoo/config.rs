@@ -43,15 +43,18 @@ impl OdooInstanceConfig {
     /// Determine authentication mode based on version or available credentials.
     pub fn auth_mode(&self) -> OdooAuthMode {
         // If version is explicitly set and < 19, use password mode
-        if let Some(v) = &self.version {
-            if let Ok(major) = v.split('.').next().unwrap_or(v).parse::<u32>() {
-                if major < 19 {
-                    return OdooAuthMode::Password;
-                }
-            }
+        if let Some(v) = &self.version
+            && let Ok(major) = v.split('.').next().unwrap_or(v).parse::<u32>()
+            && major < 19
+        {
+            return OdooAuthMode::Password;
         }
         // If no API key but has username/password, use password mode
-        if self.api_key.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true)
+        if self
+            .api_key
+            .as_ref()
+            .map(|s| s.trim().is_empty())
+            .unwrap_or(true)
             && self.username.is_some()
             && self.password.is_some()
         {
@@ -70,12 +73,12 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
     let mut instances = HashMap::new();
 
     // Prefer ODOO_INSTANCES JSON.
-    if let Ok(raw) = std::env::var("ODOO_INSTANCES") {
-        if !raw.trim().is_empty() {
-            let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&raw)
-                .map_err(|e| anyhow::anyhow!("Failed to parse ODOO_INSTANCES JSON: {e}"))?;
-            instances.extend(parsed);
-        }
+    if let Ok(raw) = std::env::var("ODOO_INSTANCES")
+        && !raw.trim().is_empty()
+    {
+        let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&raw)
+            .map_err(|e| anyhow::anyhow!("Failed to parse ODOO_INSTANCES JSON: {e}"))?;
+        instances.extend(parsed);
     }
 
     // Fallback to single-instance env vars.
@@ -88,28 +91,41 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
         let version = std::env::var("ODOO_VERSION").ok();
 
         // Accept if we have URL + (api_key OR (username + password))
-        let has_api_key = api_key.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false);
-        let has_password_auth = username.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false)
-            && password.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false);
+        let has_api_key = api_key
+            .as_ref()
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false);
+        let has_password_auth = username
+            .as_ref()
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false)
+            && password
+                .as_ref()
+                .map(|s| !s.trim().is_empty())
+                .unwrap_or(false);
 
-        if let Some(url) = url {
-            if has_api_key || has_password_auth {
-                let url = normalize_url(&url);
-                instances.insert(
-                    "default".to_string(),
-                    OdooInstanceConfig {
-                        url,
-                        db,
-                        api_key,
-                        username,
-                        password,
-                        version,
-                        timeout_ms: std::env::var("ODOO_TIMEOUT_MS").ok().and_then(|v| v.parse().ok()),
-                        max_retries: std::env::var("ODOO_MAX_RETRIES").ok().and_then(|v| v.parse().ok()),
-                        extra: HashMap::new(),
-                    },
-                );
-            }
+        if let Some(url) = url
+            && (has_api_key || has_password_auth)
+        {
+            let url = normalize_url(&url);
+            instances.insert(
+                "default".to_string(),
+                OdooInstanceConfig {
+                    url,
+                    db,
+                    api_key,
+                    username,
+                    password,
+                    version,
+                    timeout_ms: std::env::var("ODOO_TIMEOUT_MS")
+                        .ok()
+                        .and_then(|v| v.parse().ok()),
+                    max_retries: std::env::var("ODOO_MAX_RETRIES")
+                        .ok()
+                        .and_then(|v| v.parse().ok()),
+                    extra: HashMap::new(),
+                },
+            );
         }
     }
 
@@ -139,7 +155,12 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
         match mode {
             OdooAuthMode::ApiKey => {
                 // Ensure API key is available
-                if cfg.api_key.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+                if cfg
+                    .api_key
+                    .as_ref()
+                    .map(|s| s.trim().is_empty())
+                    .unwrap_or(true)
+                {
                     if let Some(k) = &global_api_key {
                         cfg.api_key = Some(k.clone());
                     } else {
@@ -151,7 +172,12 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
             }
             OdooAuthMode::Password => {
                 // Ensure username/password are available
-                if cfg.username.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+                if cfg
+                    .username
+                    .as_ref()
+                    .map(|s| s.trim().is_empty())
+                    .unwrap_or(true)
+                {
                     if let Some(u) = &global_username {
                         cfg.username = Some(u.clone());
                     } else {
@@ -160,7 +186,12 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
                         );
                     }
                 }
-                if cfg.password.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+                if cfg
+                    .password
+                    .as_ref()
+                    .map(|s| s.trim().is_empty())
+                    .unwrap_or(true)
+                {
                     if let Some(p) = &global_password {
                         cfg.password = Some(p.clone());
                     } else {
@@ -198,7 +229,10 @@ mod tests {
     #[test]
     fn test_normalize_url_with_scheme() {
         assert_eq!(normalize_url("https://example.com"), "https://example.com");
-        assert_eq!(normalize_url("http://localhost:8069"), "http://localhost:8069");
+        assert_eq!(
+            normalize_url("http://localhost:8069"),
+            "http://localhost:8069"
+        );
     }
 
     #[test]
@@ -310,4 +344,3 @@ mod tests {
         assert_eq!(config.auth_mode(), OdooAuthMode::Password);
     }
 }
-

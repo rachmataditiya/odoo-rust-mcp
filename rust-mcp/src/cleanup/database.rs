@@ -1,9 +1,9 @@
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::odoo::unified_client::OdooClient;
 use crate::odoo::types::{OdooError, OdooResult};
+use crate::odoo::unified_client::OdooClient;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CleanupOptions {
@@ -49,7 +49,10 @@ pub struct CleanupReport {
     pub dry_run: bool,
 }
 
-pub async fn execute_full_cleanup(client: &OdooClient, options: CleanupOptions) -> OdooResult<CleanupReport> {
+pub async fn execute_full_cleanup(
+    client: &OdooClient,
+    options: CleanupOptions,
+) -> OdooResult<CleanupReport> {
     let dry_run = options.dry_run.unwrap_or(false);
     let days = options.days_threshold.unwrap_or(180);
     let mut report = CleanupReport {
@@ -153,7 +156,9 @@ pub async fn execute_full_cleanup(client: &OdooClient, options: CleanupOptions) 
     if !dry_run {
         report.summary.cache_cleared = clear_caches(client).await.unwrap_or(false);
         if !report.summary.cache_cleared {
-            report.warnings.push("Cache clearing failed or partially unsupported on this database.".to_string());
+            report.warnings.push(
+                "Cache clearing failed or partially unsupported on this database.".to_string(),
+            );
         }
     }
 
@@ -167,20 +172,25 @@ pub async fn execute_full_cleanup(client: &OdooClient, options: CleanupOptions) 
     Ok(report)
 }
 
-async fn remove_test_data(client: &OdooClient, dry_run: bool) -> OdooResult<(i64, Vec<CleanupDetail>)> {
+async fn remove_test_data(
+    client: &OdooClient,
+    dry_run: bool,
+) -> OdooResult<(i64, Vec<CleanupDetail>)> {
     let mut details = vec![];
     let mut total = 0i64;
 
     let test_data_models: Vec<(&str, Value)> = vec![
-        ("res.partner", json!([["name","like","Test%"]])),
-        ("res.partner", json!([["name","like","Demo%"]])),
-        ("sale.order", json!([["name","like","%TEST%"]])),
-        ("account.move", json!([["ref","like","%TEST%"]])),
-        ("stock.move", json!([["origin","like","%TEST%"]])),
+        ("res.partner", json!([["name", "like", "Test%"]])),
+        ("res.partner", json!([["name", "like", "Demo%"]])),
+        ("sale.order", json!([["name", "like", "%TEST%"]])),
+        ("account.move", json!([["ref", "like", "%TEST%"]])),
+        ("stock.move", json!([["origin", "like", "%TEST%"]])),
     ];
 
     for (model, domain) in test_data_models {
-        let ids = client.search(model, Some(domain), None, None, None, None).await?;
+        let ids = client
+            .search(model, Some(domain), None, None, None, None)
+            .await?;
         if ids.is_empty() {
             continue;
         }
@@ -220,11 +230,17 @@ async fn archive_inactive_records(
     let threshold_date = (Utc::now() - Duration::days(days_threshold)).date_naive();
     let threshold_date_str = threshold_date.format("%Y-%m-%d").to_string();
 
-    let archivable_models = vec![("res.partner", "write_date"), ("sale.order", "write_date"), ("account.move", "write_date")];
+    let archivable_models = vec![
+        ("res.partner", "write_date"),
+        ("sale.order", "write_date"),
+        ("account.move", "write_date"),
+    ];
 
     for (model, date_field) in archivable_models {
-        let domain = json!([[date_field, "<", threshold_date_str], ["active","=", true]]);
-        let ids = client.search(model, Some(domain), None, None, None, None).await?;
+        let domain = json!([[date_field, "<", threshold_date_str], ["active", "=", true]]);
+        let ids = client
+            .search(model, Some(domain), None, None, None, None)
+            .await?;
         if ids.is_empty() {
             continue;
         }
@@ -256,13 +272,22 @@ async fn archive_inactive_records(
     Ok((total, details))
 }
 
-async fn cleanup_draft_documents(client: &OdooClient, dry_run: bool) -> OdooResult<(i64, Vec<CleanupDetail>)> {
+async fn cleanup_draft_documents(
+    client: &OdooClient,
+    dry_run: bool,
+) -> OdooResult<(i64, Vec<CleanupDetail>)> {
     let mut details = vec![];
     let mut total = 0i64;
-    let draft_models = vec![("sale.order", "state"), ("account.move", "state"), ("purchase.order", "state")];
+    let draft_models = vec![
+        ("sale.order", "state"),
+        ("account.move", "state"),
+        ("purchase.order", "state"),
+    ];
     for (model, state_field) in draft_models {
         let domain = json!([[state_field, "=", "draft"]]);
-        let ids = client.search(model, Some(domain), None, None, None, None).await?;
+        let ids = client
+            .search(model, Some(domain), None, None, None, None)
+            .await?;
         if ids.is_empty() {
             continue;
         }
@@ -277,7 +302,10 @@ async fn cleanup_draft_documents(client: &OdooClient, dry_run: bool) -> OdooResu
                 status: "success".to_string(),
             });
         } else {
-            let ok = client.unlink(model, ids.clone(), None).await.unwrap_or(false);
+            let ok = client
+                .unlink(model, ids.clone(), None)
+                .await
+                .unwrap_or(false);
             details.push(CleanupDetail {
                 operation: "cleanup_drafts".to_string(),
                 model: model.to_string(),
@@ -290,17 +318,30 @@ async fn cleanup_draft_documents(client: &OdooClient, dry_run: bool) -> OdooResu
     Ok((total, details))
 }
 
-async fn remove_orphan_records(client: &OdooClient, dry_run: bool) -> OdooResult<(i64, Vec<CleanupDetail>)> {
+async fn remove_orphan_records(
+    client: &OdooClient,
+    dry_run: bool,
+) -> OdooResult<(i64, Vec<CleanupDetail>)> {
     let mut details = vec![];
     let mut total = 0i64;
 
     let orphan_pairs = vec![
-        ("sale.order.line", json!([["order_id","=", false]]), "orphan sale order lines"),
-        ("account.move.line", json!([["move_id","=", false]]), "orphan invoice lines"),
+        (
+            "sale.order.line",
+            json!([["order_id", "=", false]]),
+            "orphan sale order lines",
+        ),
+        (
+            "account.move.line",
+            json!([["move_id", "=", false]]),
+            "orphan invoice lines",
+        ),
     ];
 
     for (model, domain, label) in orphan_pairs {
-        let ids = client.search(model, Some(domain), None, None, None, None).await?;
+        let ids = client
+            .search(model, Some(domain), None, None, None, None)
+            .await?;
         if ids.is_empty() {
             continue;
         }
@@ -315,7 +356,10 @@ async fn remove_orphan_records(client: &OdooClient, dry_run: bool) -> OdooResult
                 status: "success".to_string(),
             });
         } else {
-            let ok = client.unlink(model, ids.clone(), None).await.unwrap_or(false);
+            let ok = client
+                .unlink(model, ids.clone(), None)
+                .await
+                .unwrap_or(false);
             details.push(CleanupDetail {
                 operation: "remove_orphans".to_string(),
                 model: model.to_string(),
@@ -341,7 +385,14 @@ async fn cleanup_activity_logs(
 
     // mail.message
     let msg_ids = client
-        .search("mail.message", Some(json!([["create_date","<", threshold_str]])), None, None, None, None)
+        .search(
+            "mail.message",
+            Some(json!([["create_date", "<", threshold_str]])),
+            None,
+            None,
+            None,
+            None,
+        )
         .await?;
     if !msg_ids.is_empty() {
         let count = msg_ids.len() as i64;
@@ -355,7 +406,10 @@ async fn cleanup_activity_logs(
                 status: "success".to_string(),
             });
         } else {
-            let ok = client.unlink("mail.message", msg_ids.clone(), None).await.unwrap_or(false);
+            let ok = client
+                .unlink("mail.message", msg_ids.clone(), None)
+                .await
+                .unwrap_or(false);
             details.push(CleanupDetail {
                 operation: "cleanup_logs".to_string(),
                 model: "mail.message".to_string(),
@@ -370,7 +424,10 @@ async fn cleanup_activity_logs(
     let act_ids = client
         .search(
             "mail.activity",
-            Some(json!([["create_date","<", threshold_str], ["state","=","done"]])),
+            Some(json!([
+                ["create_date", "<", threshold_str],
+                ["state", "=", "done"]
+            ])),
             None,
             None,
             None,
@@ -389,7 +446,10 @@ async fn cleanup_activity_logs(
                 status: "success".to_string(),
             });
         } else {
-            let ok = client.unlink("mail.activity", act_ids.clone(), None).await.unwrap_or(false);
+            let ok = client
+                .unlink("mail.activity", act_ids.clone(), None)
+                .await
+                .unwrap_or(false);
             details.push(CleanupDetail {
                 operation: "cleanup_logs".to_string(),
                 model: "mail.activity".to_string(),
@@ -416,7 +476,7 @@ async fn cleanup_attachments(
     let ids = client
         .search(
             "ir.attachment",
-            Some(json!([["create_date","<", threshold_date_str]])),
+            Some(json!([["create_date", "<", threshold_date_str]])),
             None,
             None,
             None,
@@ -438,7 +498,10 @@ async fn cleanup_attachments(
             status: "success".to_string(),
         });
     } else {
-        let ok = client.unlink("ir.attachment", ids.clone(), None).await.unwrap_or(false);
+        let ok = client
+            .unlink("ir.attachment", ids.clone(), None)
+            .await
+            .unwrap_or(false);
         details.push(CleanupDetail {
             operation: "cleanup_attachments".to_string(),
             model: "ir.attachment".to_string(),
@@ -465,4 +528,3 @@ async fn clear_caches(client: &OdooClient) -> Result<bool, OdooError> {
 
     Ok(true)
 }
-

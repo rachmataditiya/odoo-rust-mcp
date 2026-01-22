@@ -1,9 +1,9 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::odoo::unified_client::OdooClient;
 use crate::odoo::types::OdooResult;
+use crate::odoo::unified_client::OdooClient;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeepCleanupOptions {
@@ -69,7 +69,10 @@ pub struct DeepCleanupReport {
     pub default_data_retained: Vec<String>,
 }
 
-pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptions) -> OdooResult<DeepCleanupReport> {
+pub async fn execute_deep_cleanup(
+    client: &OdooClient,
+    options: DeepCleanupOptions,
+) -> OdooResult<DeepCleanupReport> {
     let dry_run = options.dry_run.unwrap_or(false);
     let keep_defaults = options.keep_company_defaults.unwrap_or(true);
     let keep_users = options.keep_user_accounts.unwrap_or(true);
@@ -114,13 +117,15 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     report.details.append(&mut details);
 
     // 2) Sales
-    let (sales_removed, mut details) = remove_model_all(client, "sale.order", dry_run, "Removed sales orders").await?;
+    let (sales_removed, mut details) =
+        remove_model_all(client, "sale.order", dry_run, "Removed sales orders").await?;
     report.summary.sales_orders_removed = sales_removed;
     report.summary.documents_removed += sales_removed;
     report.details.append(&mut details);
 
     // 3) Invoices
-    let (invoices_removed, mut details) = remove_model_all(client, "account.move", dry_run, "Removed invoices/moves").await?;
+    let (invoices_removed, mut details) =
+        remove_model_all(client, "account.move", dry_run, "Removed invoices/moves").await?;
     report.summary.invoices_removed = invoices_removed;
     report.details.append(&mut details);
 
@@ -128,7 +133,7 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     let (journals_removed, mut jdetails) = remove_by_domain_best_effort(
         client,
         "account.journal",
-        json!([["type","not in", ["general","situation"]]]),
+        json!([["type", "not in", ["general", "situation"]]]),
         dry_run,
         "Removed custom journals (best effort)",
     )
@@ -140,7 +145,7 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     let (accounts_removed, mut adetails) = remove_by_domain_best_effort(
         client,
         "account.account",
-        json!([["code","not ilike","1%"]]),
+        json!([["code", "not ilike", "1%"]]),
         dry_run,
         "Removed custom accounts (best effort)",
     )
@@ -155,8 +160,14 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     report.details.append(&mut podetails);
 
     // 5) Stock moves (best-effort)
-    let (moves_removed, mut mdetails) =
-        remove_by_domain_best_effort(client, "stock.move", json!([]), dry_run, "Removed stock moves (best effort)").await?;
+    let (moves_removed, mut mdetails) = remove_by_domain_best_effort(
+        client,
+        "stock.move",
+        json!([]),
+        dry_run,
+        "Removed stock moves (best effort)",
+    )
+    .await?;
     report.summary.stock_moves_removed = moves_removed;
     report.details.append(&mut mdetails);
 
@@ -164,7 +175,7 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     let (products_removed, mut pdetails) = remove_by_domain_best_effort(
         client,
         "product.product",
-        json!([["create_date","!=", false]]),
+        json!([["create_date", "!=", false]]),
         dry_run,
         "Removed products (best effort)",
     )
@@ -176,7 +187,7 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     let (leads_removed, mut ldetails) = remove_by_domain_best_effort(
         client,
         "crm.lead",
-        json!([["type","=","lead"]]),
+        json!([["type", "=", "lead"]]),
         dry_run,
         "Removed leads",
     )
@@ -187,7 +198,7 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     let (opp_removed, mut odetails) = remove_by_domain_best_effort(
         client,
         "crm.lead",
-        json!([["type","=","opportunity"]]),
+        json!([["type", "=", "opportunity"]]),
         dry_run,
         "Removed opportunities",
     )
@@ -196,7 +207,8 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     report.details.append(&mut odetails);
 
     // 7) Projects/tasks
-    let (tasks_removed, mut tdetails) = remove_model_all(client, "project.task", dry_run, "Removed tasks").await?;
+    let (tasks_removed, mut tdetails) =
+        remove_model_all(client, "project.task", dry_run, "Removed tasks").await?;
     report.summary.tasks_removed = tasks_removed;
     report.details.append(&mut tdetails);
 
@@ -211,13 +223,22 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     report.summary.events_removed = events_removed;
     report.details.append(&mut edetails);
 
-    let (attendees_removed, mut atdetails) =
-        remove_model_all(client, "calendar.attendee", dry_run, "Removed calendar attendees").await?;
+    let (attendees_removed, mut atdetails) = remove_model_all(
+        client,
+        "calendar.attendee",
+        dry_run,
+        "Removed calendar attendees",
+    )
+    .await?;
     report.summary.attendees_removed = attendees_removed;
     report.details.append(&mut atdetails);
 
     // 9) HR
-    let employee_domain = if keep_users { json!([["user_id","=", false]]) } else { json!([]) };
+    let employee_domain = if keep_users {
+        json!([["user_id", "=", false]])
+    } else {
+        json!([])
+    };
     let (employees_removed, mut emdetails) = remove_by_domain_best_effort(
         client,
         "hr.employee",
@@ -232,7 +253,7 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     let (depts_removed, mut ddetails) = remove_by_domain_best_effort(
         client,
         "hr.department",
-        json!([["parent_id","!=", false]]),
+        json!([["parent_id", "!=", false]]),
         dry_run,
         "Removed departments (except root)",
     )
@@ -288,7 +309,9 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
         + report.summary.departments_removed
         + report.summary.logs_and_attachments;
 
-    report.default_data_retained = identify_default_data(client).await.unwrap_or_else(|_| vec!["⚠ Could not verify some defaults".to_string()]);
+    report.default_data_retained = identify_default_data(client)
+        .await
+        .unwrap_or_else(|_| vec!["⚠ Could not verify some defaults".to_string()]);
     if !dry_run {
         report.warnings.push("⚠ IMPORTANT: All non-essential data has been removed. Backup was recommended before this operation.".to_string());
     }
@@ -296,14 +319,20 @@ pub async fn execute_deep_cleanup(client: &OdooClient, options: DeepCleanupOptio
     Ok(report)
 }
 
-async fn remove_partners(client: &OdooClient, keep_defaults: bool, dry_run: bool) -> OdooResult<(i64, Vec<DeepCleanupDetail>)> {
+async fn remove_partners(
+    client: &OdooClient,
+    keep_defaults: bool,
+    dry_run: bool,
+) -> OdooResult<(i64, Vec<DeepCleanupDetail>)> {
     let mut details = vec![];
     let domain = if keep_defaults {
-        json!([["name","!=", "Your Company"]])
+        json!([["name", "!=", "Your Company"]])
     } else {
         json!([])
     };
-    let ids = client.search("res.partner", Some(domain), None, None, None, None).await?;
+    let ids = client
+        .search("res.partner", Some(domain), None, None, None, None)
+        .await?;
     if ids.is_empty() {
         return Ok((0, details));
     }
@@ -312,27 +341,35 @@ async fn remove_partners(client: &OdooClient, keep_defaults: bool, dry_run: bool
         .read(
             "res.partner",
             ids.clone(),
-            Some(vec!["id".to_string(), "name".to_string(), "is_company".to_string(), "parent_id".to_string()]),
+            Some(vec![
+                "id".to_string(),
+                "name".to_string(),
+                "is_company".to_string(),
+                "parent_id".to_string(),
+            ]),
             None,
         )
         .await?;
 
-    let system_names = vec!["Your Company", "Administrator", "Email Alias", "External IP"];
+    let system_names = [
+        "Your Company",
+        "Administrator",
+        "Email Alias",
+        "External IP",
+    ];
     let mut to_delete: Vec<i64> = ids;
-    if keep_defaults {
-        if let Some(arr) = partner_records.as_array() {
-            to_delete = arr
-                .iter()
-                .filter_map(|rec| {
-                    let name = rec.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                    if system_names.iter().any(|s| name.contains(s)) {
-                        None
-                    } else {
-                        rec.get("id").and_then(|v| v.as_i64())
-                    }
-                })
-                .collect();
-        }
+    if keep_defaults && let Some(arr) = partner_records.as_array() {
+        to_delete = arr
+            .iter()
+            .filter_map(|rec| {
+                let name = rec.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                if system_names.iter().any(|s| name.contains(s)) {
+                    None
+                } else {
+                    rec.get("id").and_then(|v| v.as_i64())
+                }
+            })
+            .collect();
     }
 
     let count = to_delete.len() as i64;
@@ -348,7 +385,10 @@ async fn remove_partners(client: &OdooClient, keep_defaults: bool, dry_run: bool
             status: "success".to_string(),
         });
     } else {
-        let ok = client.unlink("res.partner", to_delete.clone(), None).await.unwrap_or(false);
+        let ok = client
+            .unlink("res.partner", to_delete.clone(), None)
+            .await
+            .unwrap_or(false);
         details.push(DeepCleanupDetail {
             model: "res.partner".to_string(),
             records_removed: count,
@@ -377,7 +417,9 @@ async fn remove_by_domain_best_effort(
     label: &str,
 ) -> OdooResult<(i64, Vec<DeepCleanupDetail>)> {
     let mut details = vec![];
-    let ids = client.search(model, Some(domain), None, None, None, None).await?;
+    let ids = client
+        .search(model, Some(domain), None, None, None, None)
+        .await?;
     let count = ids.len() as i64;
     if count == 0 {
         return Ok((0, details));
@@ -405,20 +447,42 @@ async fn remove_by_domain_best_effort(
 
 async fn identify_default_data(client: &OdooClient) -> OdooResult<Vec<String>> {
     let mut defaults = vec![];
-    if !client.search("res.company", None, Some(1), None, None, None).await?.is_empty() {
+    if !client
+        .search("res.company", None, Some(1), None, None, None)
+        .await?
+        .is_empty()
+    {
         defaults.push("✓ Default Company Retained".to_string());
     }
-    if !client.search("res.users", Some(json!([["id","=",2]])), Some(1), None, None, None).await?.is_empty() {
+    if !client
+        .search(
+            "res.users",
+            Some(json!([["id", "=", 2]])),
+            Some(1),
+            None,
+            None,
+            None,
+        )
+        .await?
+        .is_empty()
+    {
         defaults.push("✓ Admin User Retained".to_string());
     }
-    if !client.search("ir.ui.menu", None, Some(1), None, None, None).await?.is_empty() {
+    if !client
+        .search("ir.ui.menu", None, Some(1), None, None, None)
+        .await?
+        .is_empty()
+    {
         defaults.push("✓ Menu Structure Retained".to_string());
     }
-    if !client.search("res.groups", None, Some(1), None, None, None).await?.is_empty() {
+    if !client
+        .search("res.groups", None, Some(1), None, None, None)
+        .await?
+        .is_empty()
+    {
         defaults.push("✓ User Groups Retained".to_string());
     }
     defaults.push("✓ Module Structure Intact".to_string());
     defaults.push("✓ System Configuration Retained".to_string());
     Ok(defaults)
 }
-

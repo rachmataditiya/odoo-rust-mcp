@@ -6,12 +6,12 @@ use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tracing::{error, info};
 
+use rust_mcp::mcp::McpOdooHandler;
 use rust_mcp::mcp::cursor_stdio::CursorStdioTransport;
 use rust_mcp::mcp::http as mcp_http;
 use rust_mcp::mcp::registry::Registry;
 use rust_mcp::mcp::runtime::ServerCompat;
 use rust_mcp::mcp::tools::OdooClientPool;
-use rust_mcp::mcp::McpOdooHandler;
 
 #[derive(Debug, Clone, ValueEnum)]
 enum TransportMode {
@@ -66,7 +66,10 @@ async fn run_stdio(handler: Arc<McpOdooHandler>) -> anyhow::Result<()> {
     let server = ServerCompat::new(Arc::new(transport), handler);
 
     info!("MCP server starting (stdio)");
-    server.start().await.map_err(|e| anyhow::anyhow!(e.to_string()))
+    server
+        .start()
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))
 }
 
 async fn run_ws(handler: Arc<McpOdooHandler>, listen: &str) -> anyhow::Result<()> {

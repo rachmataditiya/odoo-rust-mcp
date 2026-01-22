@@ -1,6 +1,6 @@
-use serde_json::json;
-use serde_json::Value;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use serde_json::json;
 
 #[derive(Debug, Clone)]
 pub struct PromptDef {
@@ -138,4 +138,3 @@ pub fn get_prompt_result(prompt: &Prompt) -> Value {
         ]
     })
 }
-
