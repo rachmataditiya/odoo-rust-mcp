@@ -8,7 +8,7 @@
         "properties": {
           "instance": { "type": "string" },
           "model": { "type": "string" },
-          "domain": { "type": "array" },
+          "domain": { "type": "array", "items": {} },
           "fields": { "type": "array", "items": { "type": "string" } },
           "limit": { "type": "integer" },
           "offset": { "type": "integer" },
@@ -39,7 +39,7 @@
         "properties": {
           "instance": { "type": "string" },
           "model": { "type": "string" },
-          "domain": { "type": "array" },
+          "domain": { "type": "array", "items": {} },
           "fields": { "type": "array", "items": { "type": "string" } },
           "limit": { "type": "integer" },
           "offset": { "type": "integer" },
@@ -172,7 +172,7 @@
           "instance": { "type": "string" },
           "model": { "type": "string" },
           "method": { "type": "string" },
-          "args": { "type": "array" },
+          "args": { "type": "array", "items": {} },
           "kwargs": { "type": "object" },
           "context": { "type": "object" }
         },
@@ -199,7 +199,7 @@
         "properties": {
           "instance": { "type": "string" },
           "model": { "type": "string" },
-          "domain": { "type": "array" },
+          "domain": { "type": "array", "items": {} },
           "context": { "type": "object" }
         },
         "required": ["instance", "model"],
@@ -357,7 +357,7 @@
         "properties": {
           "instance": { "type": "string" },
           "model": { "type": "string" },
-          "domain": { "type": "array" },
+          "domain": { "type": "array", "items": {} },
           "fields": { "type": "array", "items": { "type": "string" } },
           "groupby": { "type": "array", "items": { "type": "string" } },
           "offset": { "type": "integer" },
@@ -394,7 +394,7 @@
           "instance": { "type": "string" },
           "model": { "type": "string" },
           "name": { "type": "string" },
-          "args": { "type": "array" },
+          "args": { "type": "array", "items": {} },
           "operator": { "type": "string" },
           "limit": { "type": "integer" },
           "context": { "type": "object" }
