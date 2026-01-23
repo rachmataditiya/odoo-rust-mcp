@@ -310,7 +310,7 @@ impl OdooHttpClient {
             body["context"] = ctx;
         }
         let v = self.post_json2_raw(model, "create", body).await?;
-        
+
         // Odoo v19 /json/2/ create returns an array of IDs, e.g. [42]
         // We handle both array and single integer for compatibility
         if let Some(arr) = v.as_array() {
@@ -325,7 +325,7 @@ impl OdooHttpClient {
                 "create returned empty array".to_string(),
             ));
         }
-        
+
         // Fallback: try to parse as single integer (for potential future API changes)
         serde_json::from_value(v.clone()).map_err(|e| {
             OdooError::InvalidResponse(format!(
@@ -523,7 +523,7 @@ impl OdooHttpClient {
             body["default"] = d;
         }
         let v = self.post_json2_raw(model, "copy", body).await?;
-        
+
         // Handle both array and single integer response
         if let Some(arr) = v.as_array() {
             if let Some(first) = arr.first() {
@@ -537,9 +537,10 @@ impl OdooHttpClient {
                 "copy returned empty array".to_string(),
             ));
         }
-        
-        serde_json::from_value(v.clone())
-            .map_err(|e| OdooError::InvalidResponse(format!("Expected id from copy: {e}. Got: {v}")))
+
+        serde_json::from_value(v.clone()).map_err(|e| {
+            OdooError::InvalidResponse(format!("Expected id from copy: {e}. Got: {v}"))
+        })
     }
 
     /// onchange - Simulate form onchange behavior
