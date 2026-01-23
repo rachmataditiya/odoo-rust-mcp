@@ -232,18 +232,17 @@ impl OdooLegacyClient {
     ) -> OdooResult<Value> {
         let uid = self.authenticate().await?;
 
-        let mut call_args = vec![
+        // execute_kw always expects 7 arguments: [db, uid, password, model, method, args, kwargs]
+        // kwargs must be an object (even if empty) for proper Odoo execution
+        let call_args = vec![
             json!(self.db),
             json!(uid),
             json!(self.password),
             json!(model),
             json!(method),
             args,
+            kwargs.unwrap_or_else(|| json!({})),
         ];
-
-        if let Some(kw) = kwargs {
-            call_args.push(kw);
-        }
 
         self.jsonrpc_call("object", "execute_kw", json!(call_args))
             .await
