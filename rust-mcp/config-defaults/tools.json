@@ -518,6 +518,83 @@
           "context": "/context"
         }
       }
+    },
+    {
+      "name": "odoo_list_models",
+      "description": "List available Odoo models that the current user can access. Useful for model discovery.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instance": { "type": "string" },
+          "domain": { "type": "array", "items": {}, "description": "Domain filter (default: exclude transient models)" },
+          "limit": { "type": "integer" },
+          "offset": { "type": "integer" },
+          "context": { "type": "object" }
+        },
+        "required": ["instance"],
+        "additionalProperties": false
+      },
+      "op": {
+        "type": "list_models",
+        "map": {
+          "instance": "/instance",
+          "domain": "/domain",
+          "limit": "/limit",
+          "offset": "/offset",
+          "context": "/context"
+        }
+      }
+    },
+    {
+      "name": "odoo_check_access",
+      "description": "Check if the current user has read/write/unlink rights on a model or specific records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instance": { "type": "string" },
+          "model": { "type": "string" },
+          "operation": { "type": "string", "enum": ["read", "write", "unlink"] },
+          "ids": { "type": "array", "items": { "type": "integer" }, "description": "Optional: check access rules for specific records" },
+          "context": { "type": "object" }
+        },
+        "required": ["instance", "model", "operation"],
+        "additionalProperties": false
+      },
+      "op": {
+        "type": "check_access",
+        "map": {
+          "instance": "/instance",
+          "model": "/model",
+          "operation": "/operation",
+          "ids": "/ids",
+          "context": "/context"
+        }
+      }
+    },
+    {
+      "name": "odoo_create_batch",
+      "description": "Create multiple records in a single operation. More efficient than calling odoo_create multiple times.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instance": { "type": "string" },
+          "model": { "type": "string" },
+          "values": { "type": "array", "items": { "type": "object" }, "description": "Array of value objects to create (max 100)" },
+          "context": { "type": "object" }
+        },
+        "required": ["instance", "model", "values"],
+        "additionalProperties": false
+      },
+      "op": {
+        "type": "create_batch",
+        "map": {
+          "instance": "/instance",
+          "model": "/model",
+          "values": "/values",
+          "context": "/context"
+        }
+      }
     }
   ]
 }
+

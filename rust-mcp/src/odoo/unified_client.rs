@@ -125,6 +125,10 @@ pub trait OdooClientTrait: Send + Sync {
         context: Option<Value>,
     ) -> OdooResult<Value>;
 
+    /// Check if the Odoo instance is reachable with a minimal health check.
+    /// Returns true if the instance is healthy, false otherwise.
+    async fn health_check(&self) -> bool;
+
     fn is_legacy(&self) -> bool;
 }
 
@@ -392,6 +396,13 @@ impl OdooClient {
             }
         }
     }
+
+    pub async fn health_check(&self) -> bool {
+        match self {
+            OdooClient::Modern(c) => c.health_check().await,
+            OdooClient::Legacy(c) => c.health_check().await,
+        }
+    }
 }
 
 #[async_trait]
@@ -549,6 +560,13 @@ impl OdooClientTrait for OdooClient {
     ) -> OdooResult<Value> {
         self.onchange(model, ids, values, field_name, field_onchange, context)
             .await
+    }
+
+    async fn health_check(&self) -> bool {
+        match self {
+            OdooClient::Modern(c) => c.health_check().await,
+            OdooClient::Legacy(c) => c.health_check().await,
+        }
     }
 
     fn is_legacy(&self) -> bool {

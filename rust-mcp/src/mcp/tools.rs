@@ -6,6 +6,7 @@ use serde_json::{Map, Value, json};
 use tokio::sync::Mutex;
 
 use crate::cleanup;
+use crate::mcp::cache::MetadataCache;
 use crate::mcp::registry::{OpSpec, ToolDef};
 use crate::odoo::config::{OdooEnvConfig, load_odoo_env};
 use crate::odoo::types::OdooError;
@@ -17,6 +18,7 @@ use crate::odoo::unified_client::OdooClient;
 pub struct OdooClientPool {
     env: Arc<OdooEnvConfig>,
     clients: Arc<Mutex<HashMap<String, OdooClient>>>,
+    pub metadata_cache: MetadataCache,
 }
 
 impl OdooClientPool {
@@ -25,6 +27,7 @@ impl OdooClientPool {
         Ok(Self {
             env: Arc::new(env),
             clients: Arc::new(Mutex::new(HashMap::new())),
+            metadata_cache: MetadataCache::new(),
         })
     }
 
@@ -91,6 +94,9 @@ pub async fn execute_op(
         "default_get" => op_default_get(pool, op, args).await,
         "copy" => op_copy(pool, op, args).await,
         "onchange" => op_onchange(pool, op, args).await,
+        "list_models" => op_list_models(pool, op, args).await,
+        "check_access" => op_check_access(pool, op, args).await,
+        "create_batch" => op_create_batch(pool, op, args).await,
         other => Err(OdooError::InvalidResponse(format!(
             "Unknown op.type: {other}"
         ))),
@@ -169,6 +175,26 @@ fn opt_vec_string(args: &Value, op: &OpSpec, key: &str) -> Result<Option<Vec<Str
             OdooError::InvalidResponse(format!("Argument '{key}' items must be string"))
         })?;
         out.push(s.to_string());
+    }
+    Ok(Some(out))
+}
+
+fn opt_vec_i64(args: &Value, op: &OpSpec, key: &str) -> Result<Option<Vec<i64>>, OdooError> {
+    let Some(v) = ptr(args, op, key) else {
+        return Ok(None);
+    };
+    if v.is_null() {
+        return Ok(None);
+    }
+    let arr = v
+        .as_array()
+        .ok_or_else(|| OdooError::InvalidResponse(format!("Argument '{key}' must be array")))?;
+    let mut out = Vec::new();
+    for x in arr {
+        let n = x.as_i64().ok_or_else(|| {
+            OdooError::InvalidResponse(format!("Argument '{key}' items must be integer"))
+        })?;
+        out.push(n);
     }
     Ok(Some(out))
 }
@@ -438,6 +464,19 @@ async fn op_get_model_metadata(
     let model = req_str(&args, op, "model")?;
     let context = opt_value(&args, op, "context");
 
+    // Get cache TTL from environment (default: 300 seconds, 0 disables cache)
+    let cache_ttl_secs: u64 = std::env::var("ODOO_METADATA_CACHE_TTL_SECS")
+        .unwrap_or_else(|_| "300".to_string())
+        .parse()
+        .unwrap_or(300);
+
+    // Check cache if TTL > 0
+    if cache_ttl_secs > 0 {
+        if let Some(cached) = pool.metadata_cache.get(&instance, &model).await {
+            return Ok(ok_text(cached));
+        }
+    }
+
     let client = pool
         .get(&instance)
         .await
@@ -465,14 +504,22 @@ async fn op_get_model_metadata(
         .unwrap_or(&model)
         .to_string();
 
-    Ok(ok_text(json!({
+    let metadata = json!({
         "model": {
             "name": model,
             "description": description,
             "fields": fields
         }
-    })))
+    });
+
+    // Insert into cache if TTL > 0
+    if cache_ttl_secs > 0 {
+        pool.metadata_cache.insert(&instance, &model, metadata.clone(), cache_ttl_secs).await;
+    }
+
+    Ok(ok_text(metadata))
 }
+
 
 async fn op_database_cleanup(
     pool: &OdooClientPool,
@@ -642,6 +689,129 @@ async fn op_onchange(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<
         .onchange(&model, ids, values, field_name, field_onchange, context)
         .await?;
     Ok(ok_text(json!({ "result": result })))
+}
+
+async fn op_list_models(
+    pool: &OdooClientPool,
+    op: &OpSpec,
+    args: Value,
+) -> Result<Value, OdooError> {
+    let instance = req_str(&args, op, "instance")?;
+    let domain = opt_value(&args, op, "domain")
+        .unwrap_or_else(|| json!([["transient", "=", false]]));
+    let limit = opt_i64(&args, op, "limit")?;
+    let offset = opt_i64(&args, op, "offset")?;
+    let context = opt_value(&args, op, "context");
+
+    let client = pool
+        .get(&instance)
+        .await
+        .map_err(|e| OdooError::InvalidResponse(e.to_string()))?;
+
+    let models = client
+        .search_read(
+            "ir.model",
+            Some(domain),
+            Some(vec!["model".to_string(), "name".to_string()]),
+            limit,
+            offset,
+            None,
+            context,
+        )
+        .await?;
+
+    Ok(ok_text(json!({ "models": models })))
+}
+
+async fn op_check_access(
+    pool: &OdooClientPool,
+    op: &OpSpec,
+    args: Value,
+) -> Result<Value, OdooError> {
+    let instance = req_str(&args, op, "instance")?;
+    let model = req_str(&args, op, "model")?;
+    let operation = req_str(&args, op, "operation")?;
+    let ids = opt_vec_i64(&args, op, "ids")?;
+    let context = opt_value(&args, op, "context");
+
+    let client = pool
+        .get(&instance)
+        .await
+        .map_err(|e| OdooError::InvalidResponse(e.to_string()))?;
+
+    // Check model-level access rights
+    let mut params = serde_json::Map::new();
+    params.insert("operation".to_string(), json!(operation));
+
+    let access_result = client
+        .call_named(&model, "check_access_rights", None, params.clone(), context.clone())
+        .await?;
+
+    // If IDs provided, also check record-level access rules
+    let record_result = if let Some(record_ids) = ids {
+        let ids_array: Vec<i64> = record_ids.clone();
+        client
+            .call_named(
+                &model,
+                "check_access_rule",
+                Some(ids_array),
+                params,
+                context,
+            )
+            .await
+            .ok()
+    } else {
+        None
+    };
+
+    let result = json!({
+        "has_access": true,
+        "model": model,
+        "operation": operation,
+        "model_level": access_result,
+        "record_level": record_result
+    });
+
+    Ok(ok_text(result))
+}
+
+async fn op_create_batch(
+    pool: &OdooClientPool,
+    op: &OpSpec,
+    args: Value,
+) -> Result<Value, OdooError> {
+    let instance = req_str(&args, op, "instance")?;
+    let model = req_str(&args, op, "model")?;
+    let values_array = req_value(&args, op, "values")?;
+    let context = opt_value(&args, op, "context");
+
+    // Validate values is an array
+    let values_list = values_array.as_array().ok_or_else(|| {
+        OdooError::InvalidResponse("'values' must be an array".to_string())
+    })?;
+
+    // Limit batch size to 100 to prevent abuse
+    if values_list.len() > 100 {
+        return Err(OdooError::InvalidResponse(
+            "Batch size limited to 100 records".to_string(),
+        ));
+    }
+
+    let client = pool
+        .get(&instance)
+        .await
+        .map_err(|e| OdooError::InvalidResponse(e.to_string()))?;
+
+    let mut created_ids = Vec::new();
+    for values in values_list {
+        let id = client.create(&model, values.clone(), context.clone()).await?;
+        created_ids.push(id);
+    }
+
+    Ok(ok_text(json!({
+        "ids": created_ids,
+        "count": created_ids.len()
+    })))
 }
 
 #[cfg(test)]
@@ -821,5 +991,58 @@ mod tests {
         let text = result["content"][0]["text"].as_str().unwrap();
         assert!(text.contains("key"));
         assert!(text.contains("value"));
+    }
+
+    #[test]
+    fn test_opt_vec_i64_success() {
+        let args = json!({"ids": [1, 2, 3]});
+        let mut map = HashMap::new();
+        map.insert("ids".to_string(), "/ids".to_string());
+        let op = make_op(map);
+
+        let result = opt_vec_i64(&args, &op, "ids").unwrap();
+        assert_eq!(result, Some(vec![1, 2, 3]));
+    }
+
+    #[test]
+    fn test_opt_vec_i64_missing_returns_none() {
+        let args = json!({});
+        let op = make_op(HashMap::new());
+
+        let result = opt_vec_i64(&args, &op, "ids").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_opt_vec_i64_null_returns_none() {
+        let args = json!({"ids": null});
+        let mut map = HashMap::new();
+        map.insert("ids".to_string(), "/ids".to_string());
+        let op = make_op(map);
+
+        let result = opt_vec_i64(&args, &op, "ids").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_opt_vec_i64_invalid_item_returns_error() {
+        let args = json!({"ids": [1, "two", 3]});
+        let mut map = HashMap::new();
+        map.insert("ids".to_string(), "/ids".to_string());
+        let op = make_op(map);
+
+        let result = opt_vec_i64(&args, &op, "ids");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_opt_vec_i64_empty_array() {
+        let args = json!({"ids": []});
+        let mut map = HashMap::new();
+        map.insert("ids".to_string(), "/ids".to_string());
+        let op = make_op(map);
+
+        let result = opt_vec_i64(&args, &op, "ids").unwrap();
+        assert_eq!(result, Some(vec![]));
     }
 }

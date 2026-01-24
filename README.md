@@ -22,6 +22,10 @@ Rust implementation of an **Odoo MCP server** (Model Context Protocol), supporti
 - MCP over **SSE** (legacy HTTP+SSE transport)
 - MCP over **WebSocket** (standalone server; not used by Cursor)
 - **Multi-instance** support via `ODOO_INSTANCES`
+- **Metadata caching** with configurable TTL to reduce Odoo API calls
+- **Health check endpoint** for monitoring and configuration validation
+- **MCP Resources** with `odoo://` URI scheme for resource discovery
+- **New tools**: list models, check access rights, bulk create
 - Optional cleanup tools gated behind `ODOO_ENABLE_CLEANUP_TOOLS=true`
 
 ### Repository layout
@@ -183,6 +187,59 @@ Seed defaults (used only when files are missing):
 - `rust-mcp/config-defaults/prompts.json`
 - `rust-mcp/config-defaults/server.json`
 
+
+### Advanced Features
+
+#### Metadata Caching
+
+The server caches Odoo model metadata to reduce repeated API calls. Configure cache TTL:
+
+```bash
+export ODOO_METADATA_CACHE_TTL_SECS=3600  # default: 1 hour
+```
+
+Cache is in-memory and shared across all instances. Useful for reducing latency when working with large models or frequent metadata queries.
+
+#### Health Check Endpoint
+
+When running in HTTP mode, a health check endpoint is available:
+
+```bash
+GET /health
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "version": "0.2.11",
+  "instance": {
+    "name": "default",
+    "reachable": true
+  }
+}
+```
+
+#### Configuration Validation
+
+Validate your Odoo instance configuration before starting the server:
+
+```bash
+./rust-mcp validate-config
+```
+
+This command tests connectivity to all configured instances and reports any authentication or connection issues.
+
+#### MCP Resources
+
+The server exposes Odoo resources via the MCP Resources protocol using `odoo://` URIs:
+
+- `odoo://instances` - List configured Odoo instances
+- `odoo://{instance}/models` - List accessible models in an instance
+- `odoo://{instance}/metadata/{model}` - Get field metadata for a model
+
+MCP clients that support resources can use these to discover available Odoo models and fields dynamically.
 ### Installation
 
 #### Option 1: Homebrew (macOS/Linux) - Recommended
@@ -659,12 +716,14 @@ export ODOO_ENABLE_CLEANUP_TOOLS=true
 Tools are defined by `tools.json` (authoritative). The default seed includes tools like:
 - `odoo_search`, `odoo_search_read`, `odoo_read`, `odoo_create`, `odoo_update`, `odoo_delete`
 - `odoo_execute`, `odoo_count`, `odoo_workflow_action`, `odoo_generate_report`, `odoo_get_model_metadata`
+- `odoo_list_models`, `odoo_check_access`, `odoo_create_batch`
 - cleanup tools (`odoo_database_cleanup`, `odoo_deep_cleanup`) guarded by `ODOO_ENABLE_CLEANUP_TOOLS=true`
 
 Supported `op.type` values (used in `tools.json`):
 - `search`, `search_read`, `read`, `create`, `write`, `unlink`
 - `search_count`, `workflow_action`, `execute`
 - `generate_report`, `get_model_metadata`
+- `list_models`, `check_access`, `create_batch`
 - `database_cleanup`, `deep_cleanup`
 
 ### Prompts
@@ -902,6 +961,74 @@ Decoded result (shape):
   "pdf_base64": "JVBERi0xLjQKJ...<omitted>...",
   "report_name": "sale.report_saleorder",
   "record_ids": [42]
+}
+```
+
+List models (with optional filtering):
+
+```json
+{
+  "instance": "default",
+  "domain": [["transient", "=", false]],
+  "limit": 50,
+  "offset": 0
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "models": [
+    {"id": 2, "model": "ir.actions", "name": "Actions"},
+    {"id": 3, "model": "ir.model", "name": "Models"}
+  ]
+}
+```
+
+Check access rights:
+
+```json
+{
+  "instance": "default",
+  "model": "res.partner",
+  "operation": "write",
+  "ids": [1, 2, 3]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "has_access": true,
+  "model": "res.partner",
+  "operation": "write",
+  "model_level": true,
+  "record_level": true
+}
+```
+
+Bulk create records (max 100):
+
+```json
+{
+  "instance": "default",
+  "model": "res.partner",
+  "values_list": [
+    {"name": "Partner 1", "email": "p1@example.com"},
+    {"name": "Partner 2", "email": "p2@example.com"}
+  ]
+}
+```
+
+Decoded result (shape):
+
+```json
+{
+  "ids": [101, 102],
+  "created_count": 2,
+  "success": true
 }
 ```
 

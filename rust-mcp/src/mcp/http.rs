@@ -78,6 +78,59 @@ pub async fn serve_with_auth(
     Ok(())
 }
 
+/// Health check handler: returns server status and per-instance Odoo reachability
+async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
+    let pool = &state.handler.pool;
+    let instances = pool.instance_names();
+
+    let mut instance_health = serde_json::Map::new();
+    let mut any_reachable = false;
+    let mut any_unreachable = false;
+
+    for instance in instances {
+        match pool.get(&instance).await {
+            Ok(client) => {
+                if client.health_check().await {
+                    instance_health.insert(
+                        instance.clone(),
+                        json!({"reachable": true}),
+                    );
+                    any_reachable = true;
+                } else {
+                    instance_health.insert(
+                        instance.clone(),
+                        json!({"reachable": false, "error": "health check failed"}),
+                    );
+                    any_unreachable = true;
+                }
+            }
+            Err(e) => {
+                instance_health.insert(
+                    instance.clone(),
+                    json!({"reachable": false, "error": e.to_string()}),
+                );
+                any_unreachable = true;
+            }
+        }
+    }
+
+    let status = if !any_unreachable {
+        "ok"
+    } else if any_reachable {
+        "degraded"
+    } else {
+        "unhealthy"
+    };
+
+    let response = json!({
+        "status": status,
+        "version": env!("CARGO_PKG_VERSION"),
+        "instances": instance_health
+    });
+
+    Json(response)
+}
+
 /// Create the Axum Router for the MCP HTTP server.
 /// This is public to enable integration testing with axum-test.
 pub fn create_app(handler: Arc<McpOdooHandler>, auth: AuthConfig) -> Router {
@@ -94,6 +147,8 @@ pub fn create_app(handler: Arc<McpOdooHandler>, auth: AuthConfig) -> Router {
         // Legacy SSE transport (Cursor supports `SSE` transport option)
         .route("/sse", get(legacy_sse))
         .route("/messages", post(legacy_messages))
+        // Health check endpoint (no auth required for monitoring)
+        .route("/health", get(health_check))
         .layer(CorsLayer::permissive())
         .with_state(state)
 }
