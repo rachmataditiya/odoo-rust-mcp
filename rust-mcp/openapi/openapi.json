@@ -1,0 +1,425 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Odoo Rust MCP Server API",
+    "version": "0.2.13",
+    "description": "Model Context Protocol server for Odoo integration. Supports both Odoo 19+ (JSON-2 API) and Odoo < 19 (JSON-RPC).",
+    "contact": {
+      "name": "GitHub Repository",
+      "url": "https://github.com/rachmataditiya/odoo-rust-mcp"
+    },
+    "license": {
+      "name": "AGPL-3.0-only"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787",
+      "description": "Local development server"
+    },
+    {
+      "url": "http://127.0.0.1:8787",
+      "description": "Local development server (alternative)"
+    }
+  ],
+  "paths": {
+    "/mcp": {
+      "post": {
+        "summary": "MCP JSON-RPC endpoint (Streamable HTTP)",
+        "description": "Main endpoint for MCP protocol communication. Supports all MCP methods including tools, prompts, and resources.",
+        "tags": ["MCP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["jsonrpc", "method"],
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0",
+                    "description": "JSON-RPC version"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "initialize",
+                      "initialized",
+                      "tools/list",
+                      "tools/call",
+                      "prompts/list",
+                      "prompts/get",
+                      "resources/list",
+                      "resources/read",
+                      "shutdown"
+                    ],
+                    "example": "tools/list",
+                    "description": "MCP method name"
+                  },
+                  "params": {
+                    "type": "object",
+                    "description": "Method-specific parameters"
+                  },
+                  "id": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "number" },
+                      { "type": "null" }
+                    ],
+                    "description": "Request ID (null for notifications)"
+                  }
+                }
+              },
+              "examples": {
+                "initialize": {
+                  "value": {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                      "protocolVersion": "2024-11-05"
+                    }
+                  }
+                },
+                "tools_list": {
+                  "value": {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/list"
+                  }
+                },
+                "tools_call": {
+                  "value": {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                      "name": "odoo_search_read",
+                      "arguments": {
+                        "instance": "local",
+                        "model": "res.partner",
+                        "domain": [],
+                        "fields": ["name", "email"],
+                        "limit": 10
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jsonrpc": { "type": "string", "example": "2.0" },
+                    "id": {
+                      "oneOf": [
+                        { "type": "string" },
+                        { "type": "number" },
+                        { "type": "null" }
+                      ]
+                    },
+                    "result": { "type": "object" },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": { "type": "integer" },
+                        "message": { "type": "string" },
+                        "data": { "type": "object" }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "mcp-session-id": {
+                "schema": { "type": "string" },
+                "description": "Session ID for subsequent requests (returned on initialize)"
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted (for notifications without id)"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" }
+                  }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (when MCP_AUTH_TOKEN is set)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" },
+                    "error_description": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "MCP SSE stream endpoint",
+        "description": "Server-sent events stream for receiving notifications from the server.",
+        "tags": ["MCP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sse": {
+      "get": {
+        "summary": "Legacy SSE transport endpoint",
+        "description": "Legacy SSE transport for MCP communication. Returns endpoint URL for POST /messages.",
+        "tags": ["Legacy"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream with endpoint event",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages": {
+      "post": {
+        "summary": "Legacy SSE messages endpoint",
+        "description": "POST messages for legacy SSE transport. Responses are delivered via SSE stream.",
+        "tags": ["Legacy"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Session ID from SSE endpoint"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": { "type": "string" },
+                  "method": { "type": "string" },
+                  "params": { "type": "object" },
+                  "id": {
+                    "oneOf": [
+                      { "type": "string" },
+                      { "type": "number" },
+                      { "type": "null" }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted (response delivered via SSE)"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "description": "Returns server status and per-instance Odoo reachability. No authentication required.",
+        "tags": ["Monitoring"],
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["ok", "degraded", "unhealthy"],
+                      "example": "ok",
+                      "description": "Overall server status"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "0.2.13",
+                      "description": "Server version"
+                    },
+                    "instances": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "reachable": {
+                            "type": "boolean",
+                            "example": true
+                          },
+                          "error": {
+                            "type": "string",
+                            "example": "health check failed"
+                          }
+                        }
+                      },
+                      "example": {
+                        "local": { "reachable": true },
+                        "production": { "reachable": false, "error": "connection timeout" }
+                      },
+                      "description": "Per-instance health status"
+                    }
+                  }
+                },
+                "examples": {
+                  "healthy": {
+                    "value": {
+                      "status": "ok",
+                      "version": "0.2.13",
+                      "instances": {
+                        "local": { "reachable": true },
+                        "production": { "reachable": true }
+                      }
+                    }
+                  },
+                  "degraded": {
+                    "value": {
+                      "status": "degraded",
+                      "version": "0.2.13",
+                      "instances": {
+                        "local": { "reachable": true },
+                        "staging": { "reachable": false, "error": "health check failed" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification",
+        "description": "Returns this OpenAPI 3.0 specification in JSON format.",
+        "tags": ["Documentation"],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0 specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Bearer token authentication. Set MCP_AUTH_TOKEN environment variable to enable. If not set, authentication is disabled."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "JSON-RPC error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "data": {
+            "type": "object",
+            "description": "Additional error data"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoints"
+    },
+    {
+      "name": "Legacy",
+      "description": "Legacy SSE transport endpoints"
+    },
+    {
+      "name": "Monitoring",
+      "description": "Monitoring and health check endpoints"
+    },
+    {
+      "name": "Documentation",
+      "description": "API documentation endpoints"
+    }
+  ]
+}

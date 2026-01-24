@@ -128,6 +128,14 @@ async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
     Json(response)
 }
 
+/// OpenAPI specification handler
+async fn openapi_spec() -> impl IntoResponse {
+    const OPENAPI_JSON: &str = include_str!("../../openapi/openapi.json");
+    let spec: Value = serde_json::from_str(OPENAPI_JSON)
+        .unwrap_or_else(|_| json!({"error": "Failed to parse OpenAPI spec"}));
+    Json(spec)
+}
+
 /// Create the Axum Router for the MCP HTTP server.
 /// This is public to enable integration testing with axum-test.
 pub fn create_app(handler: Arc<McpOdooHandler>, auth: AuthConfig) -> Router {
@@ -146,6 +154,8 @@ pub fn create_app(handler: Arc<McpOdooHandler>, auth: AuthConfig) -> Router {
         .route("/messages", post(legacy_messages))
         // Health check endpoint (no auth required for monitoring)
         .route("/health", get(health_check))
+        // OpenAPI specification (no auth required)
+        .route("/openapi.json", get(openapi_spec))
         .layer(CorsLayer::permissive())
         .with_state(state)
 }

@@ -1,0 +1,19 @@
+{
+  "production": {
+    "url": "https://odoo.example.com",
+    "db": "production",
+    "apiKey": "YOUR_API_KEY_HERE"
+  },
+  "staging": {
+    "url": "https://staging.example.com",
+    "db": "staging",
+    "apiKey": "YOUR_API_KEY_HERE"
+  },
+  "legacy": {
+    "url": "https://legacy.example.com",
+    "db": "legacy_db",
+    "version": "18",
+    "username": "admin",
+    "password": "YOUR_PASSWORD_HERE"
+  }
+}

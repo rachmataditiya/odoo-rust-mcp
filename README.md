@@ -47,6 +47,8 @@ Notes: For Odoo 19+, access to JSON-2 external API is only available on **Custom
 
 **Option A: JSON file (recommended for readability)**
 
+See `instances.example.json` in the repository root for a complete example configuration.
+
 Create `~/.config/odoo-rust-mcp/instances.json`:
 
 ```json
@@ -500,6 +502,18 @@ Endpoints:
 
 - Streamable HTTP: `http://127.0.0.1:8787/mcp`
 - Legacy SSE: `http://127.0.0.1:8787/sse` (paired with `POST /messages`)
+- Health check: `http://127.0.0.1:8787/health` (no auth required)
+- OpenAPI spec: `http://127.0.0.1:8787/openapi.json` (no auth required)
+
+### HTTP API Documentation
+
+The HTTP API is documented using OpenAPI 3.0 specification. You can:
+
+- View the OpenAPI spec: `http://localhost:8787/openapi.json`
+- Use the spec with tools like Swagger UI, Postman, or n8n for integration
+- The spec documents all endpoints including request/response schemas
+
+For integration with tools like n8n or Dify, refer to the OpenAPI specification for complete API details.
 
 ### Authentication (HTTP Transport)
 
