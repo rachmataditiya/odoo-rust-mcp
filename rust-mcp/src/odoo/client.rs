@@ -564,6 +564,15 @@ impl OdooHttpClient {
         }
         self.post_json2_raw(model, "onchange", body).await
     }
+
+    /// Health check: perform a minimal operation to verify Odoo is reachable.
+    /// Uses search_count on ir.model with empty domain as a cheap probe.
+    pub async fn health_check(&self) -> bool {
+        // Use search_count on ir.model as a cheap health check operation
+        self.search_count("ir.model", Some(json!([])), None)
+            .await
+            .is_ok()
+    }
 }
 
 #[cfg(test)]

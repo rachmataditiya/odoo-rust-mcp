@@ -1,7 +1,9 @@
+pub mod cache;
 pub mod cursor_stdio;
 pub mod http;
 pub mod prompts;
 pub mod registry;
+pub mod resources;
 pub mod runtime;
 pub mod tools;
 
@@ -56,10 +58,11 @@ impl ServerHandler for McpOdooHandler {
         _implementation: Implementation,
         _capabilities: ClientCapabilities,
     ) -> Result<ServerCapabilities, Error> {
-        // mcp_rust_sdk ServerCapabilities is currently "custom" only, so we advertise tools/prompts in custom.
+        // mcp_rust_sdk ServerCapabilities is currently "custom" only, so we advertise tools/prompts/resources in custom.
         let mut custom = HashMap::new();
         custom.insert("tools".to_string(), json!({}));
         custom.insert("prompts".to_string(), json!({}));
+        custom.insert("resources".to_string(), json!({}));
         custom.insert(
             "odooInstances".to_string(),
             json!({ "available": self.pool.instance_names() }),
@@ -136,6 +139,16 @@ impl ServerHandler for McpOdooHandler {
                     .await
                     .ok_or_else(|| protocol_err(format!("Unknown prompt: {name}")))?;
                 Ok(get_prompt_result(&p))
+            }
+            "resources/list" => resources::list_resources(&self.pool).await,
+            "resources/read" => {
+                let params =
+                    params.ok_or_else(|| protocol_err("Missing params for resources/read"))?;
+                let uri = params
+                    .get("uri")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| protocol_err("resources/read missing 'uri'"))?;
+                resources::read_resource(&self.pool, uri).await
             }
             _ => Err(protocol_err(format!("Unknown method: {method}"))),
         }

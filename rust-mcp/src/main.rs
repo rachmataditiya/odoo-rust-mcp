@@ -170,6 +170,9 @@ enum TransportMode {
 #[derive(Debug, Parser)]
 #[command(name = "odoo-mcp-rust", version, about = "Odoo MCP server (Rust)")]
 struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+
     /// Transport mode (stdio for Claude Desktop, ws for standalone server)
     #[arg(long, value_enum, default_value_t = TransportMode::Stdio)]
     transport: TransportMode,
@@ -183,6 +186,17 @@ struct Cli {
     enable_cleanup_tools: bool,
 }
 
+#[derive(Debug, Parser)]
+enum Command {
+    /// Validate Odoo instance configuration without starting the server
+    #[command(about = "Validate Odoo configuration")]
+    ValidateConfig {
+        /// Optional path to env file (defaults to ~/.config/odoo-rust-mcp/env)
+        #[arg(long)]
+        env_file: Option<PathBuf>,
+    },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -193,6 +207,17 @@ async fn main() -> anyhow::Result<()> {
     setup_user_config();
 
     let cli = Cli::parse();
+
+    // Handle subcommands first
+    if let Some(command) = cli.command {
+        match command {
+            Command::ValidateConfig { env_file } => {
+                return validate_config(env_file).await;
+            }
+        }
+    }
+
+    // Otherwise, start the server
     let pool = OdooClientPool::from_env()?;
     let registry = Arc::new(Registry::from_env());
     registry.initial_load().await?;
@@ -209,6 +234,65 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+async fn validate_config(_env_file: Option<PathBuf>) -> anyhow::Result<()> {
+    // The environment is already loaded by setup_user_config()
+    // The --env-file option is for future extensibility
+
+    // Load Odoo environment configuration
+    let env = rust_mcp::odoo::config::load_odoo_env()?;
+    let instances: Vec<String> = env.instances.keys().cloned().collect();
+
+    if instances.is_empty() {
+        eprintln!("No Odoo instances configured");
+        return Err(anyhow::anyhow!("No instances found in configuration"));
+    }
+
+    println!("Validating {} Odoo instance(s)...\n", instances.len());
+
+    let mut all_ok = true;
+
+    for instance_name in &instances {
+        let instance_cfg = &env.instances[instance_name];
+        print!("• {} ({}): ", instance_name, instance_cfg.url);
+
+        match rust_mcp::odoo::unified_client::OdooClient::new(instance_cfg) {
+            Ok(client) => {
+                match tokio::time::timeout(
+                    std::time::Duration::from_secs(10),
+                    client.health_check(),
+                )
+                .await
+                {
+                    Ok(true) => {
+                        println!("✓ OK");
+                    }
+                    Ok(false) => {
+                        println!("✗ FAIL - health check failed");
+                        all_ok = false;
+                    }
+                    Err(_) => {
+                        println!("✗ FAIL - timeout");
+                        all_ok = false;
+                    }
+                }
+            }
+            Err(e) => {
+                println!("✗ FAIL - {}", e);
+                all_ok = false;
+            }
+        }
+    }
+
+    println!();
+    if all_ok {
+        println!("✓ All instances validated successfully!");
+        Ok(())
+    } else {
+        eprintln!("✗ One or more instances failed validation");
+        Err(anyhow::anyhow!("Validation failed"))
+    }
 }
 
 async fn run_stdio(handler: Arc<McpOdooHandler>) -> anyhow::Result<()> {

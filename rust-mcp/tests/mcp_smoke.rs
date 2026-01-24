@@ -15,17 +15,17 @@ use rust_mcp::mcp::{
 };
 use uuid::Uuid;
 
+type MessageResult = Result<Message, Error>;
+type MessageSender = mpsc::UnboundedSender<MessageResult>;
+type MessageReceiver = broadcast::Receiver<MessageResult>;
+
 struct MockTransport {
-    client_to_server: Arc<tokio::sync::Mutex<mpsc::UnboundedReceiver<Result<Message, Error>>>>,
-    server_to_client: broadcast::Sender<Result<Message, Error>>,
+    client_to_server: Arc<tokio::sync::Mutex<mpsc::UnboundedReceiver<MessageResult>>>,
+    server_to_client: broadcast::Sender<MessageResult>,
 }
 
 impl MockTransport {
-    fn new() -> (
-        Self,
-        mpsc::UnboundedSender<Result<Message, Error>>,
-        broadcast::Receiver<Result<Message, Error>>,
-    ) {
+    fn new() -> (Self, MessageSender, MessageReceiver) {
         let (tx1, rx1) = mpsc::unbounded_channel();
         let (tx2, rx2) = broadcast::channel(100);
         (

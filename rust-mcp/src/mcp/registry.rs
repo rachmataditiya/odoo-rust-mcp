@@ -526,7 +526,10 @@ mod tests {
         let parent = parent_dir_or_current(path);
         // On some systems, parent() of "file.json" returns Some(""), not None
         // The function should return "." for empty parent or current dir
-        assert!(parent == std::path::PathBuf::from(".") || parent == std::path::PathBuf::from(""));
+        assert!(
+            parent.as_os_str() == std::path::Path::new(".").as_os_str()
+                || parent.as_os_str() == std::path::Path::new("").as_os_str()
+        );
     }
 
     #[test]
