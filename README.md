@@ -7,6 +7,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Homebrew](https://img.shields.io/badge/homebrew-available-orange)](https://rachmataditiya.github.io/homebrew-odoo-rust-mcp/)
 [![Debian/Ubuntu](https://img.shields.io/badge/apt-available-blue)](https://rachmataditiya.github.io/odoo-rust-mcp/)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/pkgs/container/odoo-rust-mcp)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-ready-326CE5?logo=kubernetes&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/tree/main/k8s)
+[![Helm](https://img.shields.io/badge/helm-chart-0F1689?logo=helm&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/tree/main/helm)
 
 Rust implementation of an **Odoo MCP server** (Model Context Protocol), supporting:
 - **Odoo 19+**: JSON-2 External API (`/json/2/...`) with API key authentication
