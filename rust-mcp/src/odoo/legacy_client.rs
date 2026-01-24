@@ -611,10 +611,9 @@ impl OdooLegacyClient {
     /// Health check: perform a minimal operation to verify Odoo is reachable.
     /// Uses search_count on ir.model with empty domain as a cheap probe.
     pub async fn health_check(&self) -> bool {
-        matches!(
-            self.search_count("ir.model", Some(json!([])), None).await,
-            Ok(_)
-        )
+        self.search_count("ir.model", Some(json!([])), None)
+            .await
+            .is_ok()
     }
 }
 

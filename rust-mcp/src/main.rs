@@ -262,7 +262,9 @@ async fn validate_config(_env_file: Option<PathBuf>) -> anyhow::Result<()> {
                 match tokio::time::timeout(
                     std::time::Duration::from_secs(10),
                     client.health_check(),
-                ).await {
+                )
+                .await
+                {
                     Ok(true) => {
                         println!("✓ OK");
                     }

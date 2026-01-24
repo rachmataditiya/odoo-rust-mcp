@@ -33,10 +33,10 @@ impl MetadataCache {
         let key = (instance.to_string(), model.to_string());
         let guard = self.cache.read().await;
 
-        if let Some((value, expiration)) = guard.get(&key) {
-            if Instant::now() < *expiration {
-                return Some(value.clone());
-            }
+        if let Some((value, expiration)) = guard.get(&key)
+            && Instant::now() < *expiration
+        {
+            return Some(value.clone());
         }
         None
     }
@@ -71,6 +71,12 @@ impl MetadataCache {
         let guard = self.cache.read().await;
         guard.len()
     }
+
+    /// Check if the cache is empty.
+    pub async fn is_empty(&self) -> bool {
+        let guard = self.cache.read().await;
+        guard.is_empty()
+    }
 }
 
 impl Default for MetadataCache {
@@ -88,7 +94,9 @@ mod tests {
         let cache = MetadataCache::new();
         let value = serde_json::json!({"test": "data"});
 
-        cache.insert("instance1", "model1", value.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", value.clone(), 300)
+            .await;
         let retrieved = cache.get("instance1", "model1").await;
 
         assert_eq!(retrieved, Some(value));
@@ -126,8 +134,12 @@ mod tests {
         let value1 = serde_json::json!({"test": "data1"});
         let value2 = serde_json::json!({"test": "data2"});
 
-        cache.insert("instance1", "model1", value1.clone(), 300).await;
-        cache.insert("instance1", "model2", value2.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", value1.clone(), 300)
+            .await;
+        cache
+            .insert("instance1", "model2", value2.clone(), 300)
+            .await;
 
         assert_eq!(cache.get("instance1", "model1").await, Some(value1));
         assert_eq!(cache.get("instance1", "model2").await, Some(value2));
@@ -166,7 +178,10 @@ mod tests {
 
         // Should only have the non-expired one
         assert_eq!(cache.len().await, 1);
-        assert_eq!(cache.get("instance1", "model2").await, Some(serde_json::json!({"test": "data2"})));
+        assert_eq!(
+            cache.get("instance1", "model2").await,
+            Some(serde_json::json!({"test": "data2"}))
+        );
     }
 
     #[tokio::test]
@@ -175,8 +190,12 @@ mod tests {
         let value1 = serde_json::json!({"instance": 1});
         let value2 = serde_json::json!({"instance": 2});
 
-        cache.insert("instance1", "model", value1.clone(), 300).await;
-        cache.insert("instance2", "model", value2.clone(), 300).await;
+        cache
+            .insert("instance1", "model", value1.clone(), 300)
+            .await;
+        cache
+            .insert("instance2", "model", value2.clone(), 300)
+            .await;
 
         assert_eq!(cache.get("instance1", "model").await, Some(value1));
         assert_eq!(cache.get("instance2", "model").await, Some(value2));
@@ -189,11 +208,18 @@ mod tests {
         let value = serde_json::json!({"data": "test"});
 
         // Same model name, different instances
-        cache.insert("prod", "res.partner", value.clone(), 300).await;
-        cache.insert("staging", "res.partner", value.clone(), 300).await;
+        cache
+            .insert("prod", "res.partner", value.clone(), 300)
+            .await;
+        cache
+            .insert("staging", "res.partner", value.clone(), 300)
+            .await;
 
         assert_eq!(cache.get("prod", "res.partner").await, Some(value.clone()));
-        assert_eq!(cache.get("staging", "res.partner").await, Some(value.clone()));
+        assert_eq!(
+            cache.get("staging", "res.partner").await,
+            Some(value.clone())
+        );
     }
 
     #[tokio::test]
@@ -202,10 +228,14 @@ mod tests {
         let value1 = serde_json::json!({"version": 1});
         let value2 = serde_json::json!({"version": 2});
 
-        cache.insert("instance1", "model1", value1.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", value1.clone(), 300)
+            .await;
         assert_eq!(cache.get("instance1", "model1").await, Some(value1));
 
-        cache.insert("instance1", "model1", value2.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", value2.clone(), 300)
+            .await;
         assert_eq!(cache.get("instance1", "model1").await, Some(value2));
     }
 
@@ -224,7 +254,9 @@ mod tests {
             }
         });
 
-        cache.insert("instance1", "model1", large_value.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", large_value.clone(), 300)
+            .await;
         assert_eq!(cache.get("instance1", "model1").await, Some(large_value));
     }
 
@@ -240,7 +272,9 @@ mod tests {
         let cache2 = cache1.clone();
         let value = serde_json::json!({"test": "data"});
 
-        cache1.insert("instance1", "model1", value.clone(), 300).await;
+        cache1
+            .insert("instance1", "model1", value.clone(), 300)
+            .await;
 
         // Both should have the value (they share the same Arc)
         assert_eq!(cache1.get("instance1", "model1").await, Some(value.clone()));
@@ -253,8 +287,13 @@ mod tests {
         let value = serde_json::json!({"test": "data"});
 
         // Test with special characters in instance and model names
-        cache.insert("prod-db_v2", "module.model.subtype", value.clone(), 300).await;
-        assert_eq!(cache.get("prod-db_v2", "module.model.subtype").await, Some(value));
+        cache
+            .insert("prod-db_v2", "module.model.subtype", value.clone(), 300)
+            .await;
+        assert_eq!(
+            cache.get("prod-db_v2", "module.model.subtype").await,
+            Some(value)
+        );
     }
 
     #[tokio::test]
@@ -277,22 +316,18 @@ mod tests {
         let cache = MetadataCache::new();
         let value = serde_json::json!({"test": "data"});
 
-        cache.insert("instance1", "model1", value.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", value.clone(), 300)
+            .await;
 
         let cache1 = cache.clone();
         let cache2 = cache.clone();
         let cache3 = cache.clone();
 
         let handles = vec![
-            tokio::spawn(async move {
-                cache1.get("instance1", "model1").await
-            }),
-            tokio::spawn(async move {
-                cache2.get("instance1", "model1").await
-            }),
-            tokio::spawn(async move {
-                cache3.get("instance1", "model1").await
-            }),
+            tokio::spawn(async move { cache1.get("instance1", "model1").await }),
+            tokio::spawn(async move { cache2.get("instance1", "model1").await }),
+            tokio::spawn(async move { cache3.get("instance1", "model1").await }),
         ];
 
         for handle in handles {
@@ -310,7 +345,9 @@ mod tests {
                 let cache_clone = cache.clone();
                 tokio::spawn(async move {
                     let value = serde_json::json!({"id": i});
-                    cache_clone.insert("instance", &format!("model{}", i), value, 300).await;
+                    cache_clone
+                        .insert("instance", &format!("model{}", i), value, 300)
+                        .await;
                 })
             })
             .collect();
@@ -327,7 +364,9 @@ mod tests {
         let cache = MetadataCache::new();
         let null_value = serde_json::json!(null);
 
-        cache.insert("instance1", "model1", null_value.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", null_value.clone(), 300)
+            .await;
         assert_eq!(cache.get("instance1", "model1").await, Some(null_value));
     }
 
@@ -336,7 +375,9 @@ mod tests {
         let cache = MetadataCache::new();
         let empty_value = serde_json::json!({});
 
-        cache.insert("instance1", "model1", empty_value.clone(), 300).await;
+        cache
+            .insert("instance1", "model1", empty_value.clone(), 300)
+            .await;
         assert_eq!(cache.get("instance1", "model1").await, Some(empty_value));
     }
 }

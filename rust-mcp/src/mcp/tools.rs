@@ -471,10 +471,10 @@ async fn op_get_model_metadata(
         .unwrap_or(300);
 
     // Check cache if TTL > 0
-    if cache_ttl_secs > 0 {
-        if let Some(cached) = pool.metadata_cache.get(&instance, &model).await {
-            return Ok(ok_text(cached));
-        }
+    if cache_ttl_secs > 0
+        && let Some(cached) = pool.metadata_cache.get(&instance, &model).await
+    {
+        return Ok(ok_text(cached));
     }
 
     let client = pool
@@ -514,12 +514,13 @@ async fn op_get_model_metadata(
 
     // Insert into cache if TTL > 0
     if cache_ttl_secs > 0 {
-        pool.metadata_cache.insert(&instance, &model, metadata.clone(), cache_ttl_secs).await;
+        pool.metadata_cache
+            .insert(&instance, &model, metadata.clone(), cache_ttl_secs)
+            .await;
     }
 
     Ok(ok_text(metadata))
 }
-
 
 async fn op_database_cleanup(
     pool: &OdooClientPool,
@@ -697,8 +698,8 @@ async fn op_list_models(
     args: Value,
 ) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
-    let domain = opt_value(&args, op, "domain")
-        .unwrap_or_else(|| json!([["transient", "=", false]]));
+    let domain =
+        opt_value(&args, op, "domain").unwrap_or_else(|| json!([["transient", "=", false]]));
     let limit = opt_i64(&args, op, "limit")?;
     let offset = opt_i64(&args, op, "offset")?;
     let context = opt_value(&args, op, "context");
@@ -744,7 +745,13 @@ async fn op_check_access(
     params.insert("operation".to_string(), json!(operation));
 
     let access_result = client
-        .call_named(&model, "check_access_rights", None, params.clone(), context.clone())
+        .call_named(
+            &model,
+            "check_access_rights",
+            None,
+            params.clone(),
+            context.clone(),
+        )
         .await?;
 
     // If IDs provided, also check record-level access rules
@@ -786,9 +793,9 @@ async fn op_create_batch(
     let context = opt_value(&args, op, "context");
 
     // Validate values is an array
-    let values_list = values_array.as_array().ok_or_else(|| {
-        OdooError::InvalidResponse("'values' must be an array".to_string())
-    })?;
+    let values_list = values_array
+        .as_array()
+        .ok_or_else(|| OdooError::InvalidResponse("'values' must be an array".to_string()))?;
 
     // Limit batch size to 100 to prevent abuse
     if values_list.len() > 100 {
@@ -804,7 +811,9 @@ async fn op_create_batch(
 
     let mut created_ids = Vec::new();
     for values in values_list {
-        let id = client.create(&model, values.clone(), context.clone()).await?;
+        let id = client
+            .create(&model, values.clone(), context.clone())
+            .await?;
         created_ids.push(id);
     }
 
@@ -1065,7 +1074,10 @@ mod tests {
         let op = make_op(map);
 
         let result = opt_vec_i64(&args, &op, "ids").unwrap();
-        assert_eq!(result, Some(vec![9223372036854775807i64, -9223372036854775808i64]));
+        assert_eq!(
+            result,
+            Some(vec![9223372036854775807i64, -9223372036854775808i64])
+        );
     }
 
     #[test]
@@ -1154,7 +1166,14 @@ mod tests {
         let op = make_op(map);
 
         let result = opt_vec_string(&args, &op, "names").unwrap();
-        assert_eq!(result, Some(vec!["Alice".to_string(), "Bob".to_string(), "Charlie".to_string()]));
+        assert_eq!(
+            result,
+            Some(vec![
+                "Alice".to_string(),
+                "Bob".to_string(),
+                "Charlie".to_string()
+            ])
+        );
     }
 
     #[test]
@@ -1185,7 +1204,10 @@ mod tests {
         let op = make_op(map);
 
         let result = opt_vec_string(&args, &op, "names").unwrap();
-        assert_eq!(result, Some(vec!["".to_string(), "test".to_string(), "".to_string()]));
+        assert_eq!(
+            result,
+            Some(vec!["".to_string(), "test".to_string(), "".to_string()])
+        );
     }
 
     #[test]
@@ -1196,7 +1218,15 @@ mod tests {
         let op = make_op(map);
 
         let result = opt_vec_string(&args, &op, "names").unwrap();
-        assert_eq!(result, Some(vec!["Alice".to_string(), "Müller".to_string(), "日本".to_string(), "🚀".to_string()]));
+        assert_eq!(
+            result,
+            Some(vec![
+                "Alice".to_string(),
+                "Müller".to_string(),
+                "日本".to_string(),
+                "🚀".to_string()
+            ])
+        );
     }
 
     #[test]

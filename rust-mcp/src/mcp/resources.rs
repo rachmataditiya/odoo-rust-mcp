@@ -1,5 +1,5 @@
-use serde_json::{Value, json};
 use mcp_rust_sdk::error::{Error, ErrorCode};
+use serde_json::{Value, json};
 
 use crate::mcp::tools::OdooClientPool;
 
@@ -23,7 +23,10 @@ impl ResourceUri {
     /// Parse an odoo:// URI into a ResourceUri
     pub fn parse(uri: &str) -> Result<Self, String> {
         if !uri.starts_with("odoo://") {
-            return Err(format!("Invalid URI scheme: expected 'odoo://', got '{}'", uri));
+            return Err(format!(
+                "Invalid URI scheme: expected 'odoo://', got '{}'",
+                uri
+            ));
         }
 
         let path = &uri[7..]; // Remove "odoo://"
@@ -50,10 +53,9 @@ impl ResourceUri {
                     } else {
                         Err(format!("Invalid models URI: {}", uri))
                     }
-                } else if rest.starts_with("metadata/") {
-                    let model = &rest[9..]; // Remove "metadata/"
+                } else if let Some(model) = rest.strip_prefix("metadata/") {
                     if model.is_empty() {
-                        Err(format!("Invalid metadata URI: missing model name"))
+                        Err("Invalid metadata URI: missing model name".to_string())
                     } else {
                         Ok(ResourceUri::Metadata {
                             instance: instance.to_string(),
@@ -109,15 +111,12 @@ pub async fn list_resources(pool: &OdooClientPool) -> Result<Value, Error> {
 
 /// Read a specific resource by URI
 pub async fn read_resource(pool: &OdooClientPool, uri: &str) -> Result<Value, Error> {
-    let resource = ResourceUri::parse(uri)
-        .map_err(|e| resource_err(e))?;
+    let resource = ResourceUri::parse(uri).map_err(resource_err)?;
 
     match resource {
         ResourceUri::Instances => read_instances(pool).await,
         ResourceUri::Models { instance } => read_models(pool, &instance).await,
-        ResourceUri::Metadata { instance, model } => {
-            read_metadata(pool, &instance, &model).await
-        }
+        ResourceUri::Metadata { instance, model } => read_metadata(pool, &instance, &model).await,
     }
 }
 
@@ -175,11 +174,7 @@ async fn read_models(pool: &OdooClientPool, instance: &str) -> Result<Value, Err
 }
 
 /// Read metadata for a specific model
-async fn read_metadata(
-    pool: &OdooClientPool,
-    instance: &str,
-    model: &str,
-) -> Result<Value, Error> {
+async fn read_metadata(pool: &OdooClientPool, instance: &str, model: &str) -> Result<Value, Error> {
     let client = pool
         .get(instance)
         .await
@@ -465,10 +460,10 @@ mod tests {
     fn test_multiple_metadata_calls() {
         let uri1 = "odoo://prod/metadata/sale.order";
         let uri2 = "odoo://staging/metadata/sale.order";
-        
+
         let parsed1 = ResourceUri::parse(uri1).unwrap();
         let parsed2 = ResourceUri::parse(uri2).unwrap();
-        
+
         assert_ne!(parsed1, parsed2);
         assert_eq!(parsed1.to_uri(), uri1);
         assert_eq!(parsed2.to_uri(), uri2);
@@ -506,8 +501,19 @@ mod tests {
     fn test_all_resource_types_to_uri() {
         let uris = vec![
             ("odoo://instances", ResourceUri::Instances),
-            ("odoo://prod/models", ResourceUri::Models { instance: "prod".to_string() }),
-            ("odoo://prod/metadata/res.partner", ResourceUri::Metadata { instance: "prod".to_string(), model: "res.partner".to_string() }),
+            (
+                "odoo://prod/models",
+                ResourceUri::Models {
+                    instance: "prod".to_string(),
+                },
+            ),
+            (
+                "odoo://prod/metadata/res.partner",
+                ResourceUri::Metadata {
+                    instance: "prod".to_string(),
+                    model: "res.partner".to_string(),
+                },
+            ),
         ];
 
         for (original, parsed) in uris {

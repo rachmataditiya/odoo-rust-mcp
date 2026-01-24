@@ -569,10 +569,9 @@ impl OdooHttpClient {
     /// Uses search_count on ir.model with empty domain as a cheap probe.
     pub async fn health_check(&self) -> bool {
         // Use search_count on ir.model as a cheap health check operation
-        matches!(
-            self.search_count("ir.model", Some(json!([])), None).await,
-            Ok(_)
-        )
+        self.search_count("ir.model", Some(json!([])), None)
+            .await
+            .is_ok()
     }
 }
 

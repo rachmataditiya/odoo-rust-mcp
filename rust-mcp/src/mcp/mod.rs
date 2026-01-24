@@ -140,9 +140,7 @@ impl ServerHandler for McpOdooHandler {
                     .ok_or_else(|| protocol_err(format!("Unknown prompt: {name}")))?;
                 Ok(get_prompt_result(&p))
             }
-            "resources/list" => {
-                resources::list_resources(&self.pool).await
-            }
+            "resources/list" => resources::list_resources(&self.pool).await,
             "resources/read" => {
                 let params =
                     params.ok_or_else(|| protocol_err("Missing params for resources/read"))?;

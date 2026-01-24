@@ -91,10 +91,7 @@ async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
         match pool.get(&instance).await {
             Ok(client) => {
                 if client.health_check().await {
-                    instance_health.insert(
-                        instance.clone(),
-                        json!({"reachable": true}),
-                    );
+                    instance_health.insert(instance.clone(), json!({"reachable": true}));
                     any_reachable = true;
                 } else {
                     instance_health.insert(
