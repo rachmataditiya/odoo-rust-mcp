@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Homebrew](https://img.shields.io/badge/homebrew-available-orange)](https://rachmataditiya.github.io/homebrew-odoo-rust-mcp/)
 [![Debian/Ubuntu](https://img.shields.io/badge/apt-available-blue)](https://rachmataditiya.github.io/odoo-rust-mcp/)
-[![Docker](https://ghcr-badge.egpl.dev/rachmataditiya/odoo-rust-mcp/latest_tag?trim=major&label=docker&color=2496ED)](https://github.com/rachmataditiya/odoo-rust-mcp/pkgs/container/odoo-rust-mcp)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fodoo--rust--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/pkgs/container/odoo-rust-mcp)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-ready-326CE5?logo=kubernetes&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/tree/main/k8s)
 [![Helm](https://img.shields.io/badge/helm-chart-0F1689?logo=helm&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/tree/main/helm)
 
