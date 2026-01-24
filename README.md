@@ -1082,13 +1082,6 @@ odoo_search_read sample records: [{"id":46,"name":"Kasir C"},{"id":45,"name":"Ka
 prompts/list: odoo_common_models, odoo_domain_filters
 ```
 
-There is also a Python smoke tester that validates Cursor-style stdio + Streamable HTTP:
-
-```bash
-python3 ./mcp_test.py stdio --bin ./rust-mcp/target/release/rust-mcp --env-file .env
-python3 ./mcp_test.py http --url http://127.0.0.1:8787/mcp
-```
-
 ### Security
 
 - Do **not** commit `.env` or any file containing API keys/passwords.
