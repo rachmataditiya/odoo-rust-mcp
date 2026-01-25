@@ -7,19 +7,19 @@ class RustMcp < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/rachmataditiya/odoo-rust-mcp/releases/download/v#{version}/rust-mcp-aarch64-apple-darwin.tar.gz"
-      sha256 "7d9e13cd513ed75df68e1ae00dd6ca6e05424bc0c1d9062c14719184569d2299"  # macos-arm64
+      sha256 "edf8c686cc8ea2f38c439744373895e4797937c15f8c4b2e1f6c87726abab19e"  # macos-arm64
     end
 
     if Hardware::CPU.intel?
       url "https://github.com/rachmataditiya/odoo-rust-mcp/releases/download/v#{version}/rust-mcp-x86_64-apple-darwin.tar.gz"
-      sha256 "7d8e7a2243040943647d45de3e312abc390d5dc80d9e9c6bd968b6ec82f0e823"  # macos-x64
+      sha256 "6133e459b55c7d1d02fe77051468d46da3c828c5fc1b60630e1b50c853f695dd"  # macos-x64
     end
   end
 
   on_linux do
     if Hardware::CPU.intel?
       url "https://github.com/rachmataditiya/odoo-rust-mcp/releases/download/v#{version}/rust-mcp-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "8f0c4339dccf1f90cb43b7011f9c842b1205fcfe42220cf5b403e82d1235e346"  # linux-x64
+      sha256 "8216abab5124e812f3c0c8b67cf88d70ba52c4fb9477f9b7297b75df852d7319"  # linux-x64
     end
   end
 
