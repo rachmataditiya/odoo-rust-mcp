@@ -288,23 +288,25 @@ jobs:
         id: checksums
         run: |
           cd release-assets
+          echo "=== Files in release-assets ==="
+          ls -la
           echo "=== Generating checksums ==="
-          for file in *.tar.gz *.zip *.deb 2>/dev/null; do
-            if [ -f "$file" ]; then
-              sha256=$(sha256sum "$file" | cut -d' ' -f1)
-              echo "Checksum for $file: $sha256"
-              if [[ "$file" == *"aarch64-apple-darwin"* ]]; then
-                echo "sha256_macos_arm64=$sha256" >> $GITHUB_OUTPUT
-              elif [[ "$file" == *"x86_64-apple-darwin"* ]]; then
-                echo "sha256_macos_x64=$sha256" >> $GITHUB_OUTPUT
-              elif [[ "$file" == *"x86_64-unknown-linux-gnu"* ]]; then
-                echo "sha256_linux_x64=$sha256" >> $GITHUB_OUTPUT
-              fi
+          shopt -s nullglob
+          for file in *.tar.gz *.zip *.deb; do
+            sha256=$(sha256sum "$file" | cut -d' ' -f1)
+            echo "Checksum for $file: $sha256"
+            if [[ "$file" == *"aarch64-apple-darwin"* ]]; then
+              echo "sha256_macos_arm64=$sha256" >> $GITHUB_OUTPUT
+            elif [[ "$file" == *"x86_64-apple-darwin"* ]]; then
+              echo "sha256_macos_x64=$sha256" >> $GITHUB_OUTPUT
+            elif [[ "$file" == *"x86_64-unknown-linux-gnu"* ]]; then
+              echo "sha256_linux_x64=$sha256" >> $GITHUB_OUTPUT
             fi
           done
+          shopt -u nullglob
           # Generate checksums file
-          sha256sum *.tar.gz *.zip *.deb 2>/dev/null > SHA256SUMS.txt || true
-          cat SHA256SUMS.txt
+          sha256sum *.tar.gz *.zip *.deb 2>/dev/null > SHA256SUMS.txt || echo "No files to checksum"
+          cat SHA256SUMS.txt 2>/dev/null || echo "No checksums generated"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
