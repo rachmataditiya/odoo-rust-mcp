@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: odoo-rust-mcp
     app.kubernetes.io/component: mcp-server
-    app.kubernetes.io/version: "0.2.11"
+    app.kubernetes.io/version: "0.3.0"
 spec:
   replicas: 2
   selector:
@@ -48,13 +48,16 @@ spec:
       
       containers:
         - name: odoo-mcp
-          image: ghcr.io/rachmataditiya/odoo-rust-mcp:0.2.11
+          image: ghcr.io/rachmataditiya/odoo-rust-mcp:0.3.0
           imagePullPolicy: IfNotPresent
           
-          # Container ports
+          # Container ports (MCP server + Config UI)
           ports:
-            - name: http
+            - name: mcp
               containerPort: 8787
+              protocol: TCP
+            - name: config-ui
+              containerPort: 3000
               protocol: TCP
           
           # Environment variables
@@ -91,6 +94,12 @@ spec:
               value: "/config/prompts.json"
             - name: MCP_SERVER_JSON
               value: "/config/server.json"
+            
+            # =========================================================================
+            # Config Manager (Web UI)
+            # =========================================================================
+            - name: ODOO_CONFIG_SERVER_PORT
+              value: "3000"
             
             # =========================================================================
             # HTTP Authentication

@@ -21,6 +21,7 @@ Rust implementation of an **Odoo MCP server** (Model Context Protocol), supporti
 - MCP over **Streamable HTTP** (Cursor remote transport)
 - MCP over **SSE** (legacy HTTP+SSE transport)
 - MCP over **WebSocket** (standalone server; not used by Cursor)
+- **Web UI for configuration** on port 3000 (tools, prompts, server, instances JSON)
 - **Multi-instance** support via `ODOO_INSTANCES`
 - **Metadata caching** with configurable TTL to reduce Odoo API calls
 - **Health check endpoint** for monitoring and configuration validation
@@ -327,7 +328,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "0.2.11",
+  "version": "0.3.0",
   "instance": {
     "name": "default",
     "reachable": true
@@ -354,6 +355,42 @@ The server exposes Odoo resources via the MCP Resources protocol using `odoo://`
 - `odoo://{instance}/metadata/{model}` - Get field metadata for a model
 
 MCP clients that support resources can use these to discover available Odoo models and fields dynamically.
+
+#### Configuration Server (Web UI)
+
+A web-based configuration interface is available on port **3000** for managing `tools.json`, `prompts.json`, `server.json`, and `instances.json` without manual file editing.
+
+**Access the config UI:**
+
+- Local: `http://localhost:3000`
+- Docker Compose: `http://localhost:3000` or via Traefik `http://mcp-config.localhost`
+- Kubernetes: Exposed via service on port 3000
+
+**Features:**
+
+- Edit all JSON configuration files via interactive UI
+- Real-time JSON validation before saving
+- Tool enable/disable checkboxes (e.g., toggle `ODOO_ENABLE_CLEANUP_TOOLS`)
+- Automatic file watching and hot reload (no server restart needed)
+- REST API endpoints for programmatic access:
+  - `GET /api/config/{instances|tools|prompts|server}` - Retrieve config
+  - `POST /api/config/{instances|tools|prompts|server}` - Update config
+  - `GET /health` - Health check
+
+**Environment variable:**
+
+```bash
+export ODOO_CONFIG_SERVER_PORT=3000  # default: 3000
+```
+
+**Example: Enable/disable cleanup tools via UI**
+
+1. Open `http://localhost:3000`
+2. Go to **Tools** tab
+3. Find the `odoo_create_batch` tool (or other cleanup operations)
+4. Toggle the **ODOO_ENABLE_CLEANUP_TOOLS** checkbox
+5. Save changes (file is auto-reloaded)
+
 ### Installation
 
 #### Option 1: Homebrew (macOS/Linux) - Recommended

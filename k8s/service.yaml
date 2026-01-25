@@ -1,5 +1,5 @@
 # Kubernetes Service for Odoo MCP Server
-# Exposes the MCP server within the cluster
+# Exposes both MCP server (port 8787) and Config UI (port 3000)
 #
 # Apply: kubectl apply -f service.yaml -n odoo-mcp
 apiVersion: v1
@@ -13,9 +13,13 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: http
+    - name: mcp
       port: 8787
-      targetPort: http
+      targetPort: 8787
+      protocol: TCP
+    - name: config-ui
+      port: 3000
+      targetPort: 3000
       protocol: TCP
   selector:
     app.kubernetes.io/name: odoo-rust-mcp

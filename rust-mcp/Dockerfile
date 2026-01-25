@@ -23,6 +23,7 @@ COPY src ./src
 COPY tests ./tests
 COPY config-defaults ./config-defaults
 COPY openapi ./openapi
+COPY static ./static
 
 # Build release binary
 RUN cargo build --release
