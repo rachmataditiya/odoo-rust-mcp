@@ -47,8 +47,8 @@ pub async fn start_config_server(port: u16, config_dir: std::path::PathBuf) -> a
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
-    info!("Config server listening on http://localhost:{}", port);
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await?;
+    info!("Config server listening on http://0.0.0.0:{}", port);
 
     axum::serve(listener, app).await?;
 
