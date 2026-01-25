@@ -248,11 +248,13 @@ jobs:
           path: rust-mcp/target/${{ matrix.target }}/debian/*.deb
 
   # =============================================================================
-  # Stage 3: Create GitHub Release (depends on build, build-docker, build-deb)
+  # Stage 3: Create GitHub Release (depends on build only, deb is optional)
   # =============================================================================
   release:
     name: Create GitHub Release
-    needs: [build, build-docker, build-deb]
+    needs: [build]
+    # Run even if build-docker or build-deb fail
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write

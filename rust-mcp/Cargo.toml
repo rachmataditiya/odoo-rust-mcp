@@ -54,7 +54,8 @@ assets = [
     ["config/server.json", "usr/share/rust-mcp/", "644"],
     ["../dotenv.example", "usr/share/rust-mcp/.env.example", "644"],
     ["debian/rust-mcp-service", "usr/bin/", "755"],
-    ["static/dist/", "usr/share/rust-mcp/static/", "644"],
+    # Static UI files (glob pattern for recursive copy)
+    ["static/dist/**/*", "usr/share/rust-mcp/static/dist/", "644"],
 ]
 maintainer-scripts = "debian/"
 systemd-units = { unit-name = "rust-mcp", enable = false }
