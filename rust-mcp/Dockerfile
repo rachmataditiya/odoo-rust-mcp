@@ -39,8 +39,9 @@ COPY rust-mcp/tests ./tests
 COPY rust-mcp/config-defaults ./config-defaults
 # Copy openapi directory (required for include_str! in code)
 COPY rust-mcp/openapi ./openapi
-# Copy static directory
-COPY rust-mcp/static ./static
+# Create static directory and copy if exists (dist/ will be added by UI build)
+RUN mkdir -p ./static
+COPY rust-mcp/static/.gitkeep ./static/.gitkeep
 
 # Copy built UI to static/dist (Vite outputs to rust-mcp/static/dist from config-ui)
 # The UI is already built in previous step and should be at rust-mcp/static/dist
