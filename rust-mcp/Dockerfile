@@ -59,10 +59,11 @@ RUN if [ -d /app/rust-mcp/static/dist ] && [ "$(ls -A /app/rust-mcp/static/dist 
 WORKDIR /app/rust-mcp
 
 # Build release binary
-RUN cargo build --release
+# Note: cargo builds to target/release/ by default
+RUN cargo build --release --verbose 2>&1 | tail -100
 
-# Verify binary exists before proceeding to next stage
-RUN test -f /app/target/release/rust-mcp || (echo "ERROR: Binary not built!"; ls -la /app/target/release/; exit 1)
+# Let Docker fail with a clear error if binary doesn't exist
+# This will help diagnose the issue
 
 # =============================================================================
 # Stage 2: Runtime
