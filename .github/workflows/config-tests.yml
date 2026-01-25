@@ -69,6 +69,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: config-ui/package-lock.json
+
+      - name: Build React UI
+        working-directory: config-ui
+        run: |
+          npm ci
+          npm run build
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 

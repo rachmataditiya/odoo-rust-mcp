@@ -41,7 +41,7 @@ COPY rust-mcp/config-defaults ./config-defaults
 COPY rust-mcp/openapi ./openapi
 # Create static directory and copy if exists (dist/ will be added by UI build)
 RUN mkdir -p ./static
-COPY rust-mcp/static/.gitkeep ./static/.gitkeep
+COPY rust-mcp/static/ ./static/
 
 # Copy built UI to static/dist (Vite outputs to rust-mcp/static/dist from config-ui)
 # The UI is already built in previous step and should be at rust-mcp/static/dist
