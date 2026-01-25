@@ -30,21 +30,19 @@ impl ConfigWatcher {
         tx: broadcast::Sender<ConfigChangeEvent>,
     ) -> NotifyResult<()> {
         let mut watcher: RecommendedWatcher =
-            notify::recommended_watcher(move |res: NotifyResult<Event>| {
-                match res {
-                    Ok(event) => {
-                        for path in event.paths {
-                            if let Some(filename) = path.file_name()
-                                && let Some(name) = filename.to_str()
-                                && name.ends_with(".json")
-                            {
-                                let _ = tx.send(name.to_string());
-                                info!("Config file changed: {}", name);
-                            }
+            notify::recommended_watcher(move |res: NotifyResult<Event>| match res {
+                Ok(event) => {
+                    for path in event.paths {
+                        if let Some(filename) = path.file_name()
+                            && let Some(name) = filename.to_str()
+                            && name.ends_with(".json")
+                        {
+                            let _ = tx.send(name.to_string());
+                            info!("Config file changed: {}", name);
                         }
                     }
-                    Err(e) => error!("Watcher error: {}", e),
                 }
+                Err(e) => error!("Watcher error: {}", e),
             })?;
 
         watcher.watch(&config_dir, RecursiveMode::NonRecursive)?;
