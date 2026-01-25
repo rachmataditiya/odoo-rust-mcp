@@ -10,20 +10,38 @@ FROM rust:1.91.1-slim-bookworm AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies (including Node.js for React UI)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
     ca-certificates \
+    curl \
   && rm -rf /var/lib/apt/lists/*
 
-# Copy source files
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
-COPY tests ./tests
-COPY config-defaults ./config-defaults
-COPY openapi ./openapi
-COPY static ./static
+# Install Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
+  && rm -rf /var/lib/apt/lists/*
+
+# Build React UI first
+WORKDIR /app/config-ui
+COPY config-ui/package.json config-ui/package-lock.json* ./
+RUN npm ci || npm install
+
+COPY config-ui ./
+RUN npm run build
+
+# Build Rust binary
+WORKDIR /app/rust-mcp
+COPY rust-mcp/Cargo.toml rust-mcp/Cargo.lock ./
+COPY rust-mcp/src ./src
+COPY rust-mcp/tests ./tests
+COPY rust-mcp/config-defaults ./config-defaults
+COPY rust-mcp/openapi ./openapi
+COPY rust-mcp/static ./static
+
+# Copy built UI to static/dist (Vite outputs to ../rust-mcp/static/dist from config-ui)
+RUN mkdir -p static/dist && cp -r ../rust-mcp/static/dist/* static/dist/ 2>/dev/null || echo "Note: UI build output should be at rust-mcp/static/dist"
 
 # Build release binary
 RUN cargo build --release

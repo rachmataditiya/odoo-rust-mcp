@@ -7,8 +7,8 @@ use axum::{
 };
 use serde_json::{Value, json};
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
-use tracing::{error, info};
+use tower_http::{cors::CorsLayer, services::ServeDir};
+use tracing::{error, info, warn};
 
 use super::{ConfigManager, ConfigWatcher};
 
@@ -27,6 +27,15 @@ pub async fn start_config_server(port: u16, config_dir: std::path::PathBuf) -> a
         config_watcher,
     };
 
+    // Serve static files from dist directory (React app)
+    // If dist doesn't exist, show a helpful error message
+    let static_dir = std::path::Path::new("static/dist");
+    if !static_dir.exists() || !static_dir.is_dir() {
+        warn!(
+            "static/dist directory not found. Please build the React UI first with: cd config-ui && npm run build"
+        );
+    }
+
     let app = Router::new()
         // Health check
         .route("/health", get(health_check))
@@ -42,8 +51,8 @@ pub async fn start_config_server(port: u16, config_dir: std::path::PathBuf) -> a
         // Server endpoints
         .route("/api/config/server", get(get_server))
         .route("/api/config/server", post(update_server))
-        // UI
-        .route("/", get(serve_ui))
+        // Serve static files (React app)
+        .nest_service("/", ServeDir::new("static/dist"))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
@@ -196,9 +205,4 @@ async fn update_server(
                 .into_response()
         }
     }
-}
-
-async fn serve_ui() -> impl IntoResponse {
-    let html = include_str!("../../static/config-ui.html");
-    (StatusCode::OK, [("content-type", "text/html")], html)
 }

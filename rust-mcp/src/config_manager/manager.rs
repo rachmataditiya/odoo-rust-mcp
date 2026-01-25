@@ -81,15 +81,26 @@ impl ConfigManager {
         let path = self.config_dir.join("tools.json");
 
         if !path.exists() {
-            warn!("tools.json not found at {:?}, returning empty config", path);
-            return Ok(json!({}));
+            warn!("tools.json not found at {:?}, returning empty array", path);
+            return Ok(json!([]));
         }
 
         let content = fs::read_to_string(&path)?;
         let config: Value = serde_json::from_str(&content)?;
 
+        // Extract tools array from {"tools": [...]} or return array directly
+        let tools = if let Some(tools_array) = config.get("tools").and_then(|v| v.as_array()) {
+            json!(tools_array)
+        } else if config.is_array() {
+            config
+        } else {
+            return Err(anyhow::anyhow!(
+                "Invalid tools.json format: expected object with 'tools' array or array directly"
+            ));
+        };
+
         info!("Loaded tools config from {:?}", path);
-        Ok(config)
+        Ok(tools)
     }
 
     /// Save tools config to file
@@ -100,11 +111,21 @@ impl ConfigManager {
             fs::create_dir_all(parent)?;
         }
 
-        if !config.is_array() {
-            return Err(anyhow::anyhow!("Tools config must be a JSON array"));
-        }
+        // Accept either array directly or object with tools array
+        let tools_array = if config.is_array() {
+            config
+        } else if let Some(tools) = config.get("tools").and_then(|v| v.as_array()) {
+            json!(tools)
+        } else {
+            return Err(anyhow::anyhow!(
+                "Tools config must be a JSON array or object with 'tools' array"
+            ));
+        };
 
-        let json_str = serde_json::to_string_pretty(&config)?;
+        // Save as {"tools": [...]} format to match file structure
+        let file_content = json!({ "tools": tools_array });
+
+        let json_str = serde_json::to_string_pretty(&file_content)?;
         fs::write(&path, json_str)?;
 
         info!("Saved tools config to {:?}", path);
@@ -117,17 +138,29 @@ impl ConfigManager {
 
         if !path.exists() {
             warn!(
-                "prompts.json not found at {:?}, returning empty config",
+                "prompts.json not found at {:?}, returning empty array",
                 path
             );
-            return Ok(json!({}));
+            return Ok(json!([]));
         }
 
         let content = fs::read_to_string(&path)?;
         let config: Value = serde_json::from_str(&content)?;
 
+        // Extract prompts array from {"prompts": [...]} or return array directly
+        let prompts = if let Some(prompts_array) = config.get("prompts").and_then(|v| v.as_array())
+        {
+            json!(prompts_array)
+        } else if config.is_array() {
+            config
+        } else {
+            return Err(anyhow::anyhow!(
+                "Invalid prompts.json format: expected object with 'prompts' array or array directly"
+            ));
+        };
+
         info!("Loaded prompts config from {:?}", path);
-        Ok(config)
+        Ok(prompts)
     }
 
     /// Save prompts config to file
@@ -138,11 +171,21 @@ impl ConfigManager {
             fs::create_dir_all(parent)?;
         }
 
-        if !config.is_array() {
-            return Err(anyhow::anyhow!("Prompts config must be a JSON array"));
-        }
+        // Accept either array directly or object with prompts array
+        let prompts_array = if config.is_array() {
+            config
+        } else if let Some(prompts) = config.get("prompts").and_then(|v| v.as_array()) {
+            json!(prompts)
+        } else {
+            return Err(anyhow::anyhow!(
+                "Prompts config must be a JSON array or object with 'prompts' array"
+            ));
+        };
 
-        let json_str = serde_json::to_string_pretty(&config)?;
+        // Save as {"prompts": [...]} format to match file structure
+        let file_content = json!({ "prompts": prompts_array });
+
+        let json_str = serde_json::to_string_pretty(&file_content)?;
         fs::write(&path, json_str)?;
 
         info!("Saved prompts config to {:?}", path);

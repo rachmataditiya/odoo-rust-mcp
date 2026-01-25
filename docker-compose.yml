@@ -16,8 +16,8 @@ networks:
 services:
   odoo-mcp:
     build:
-      context: ./rust-mcp
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: rust-mcp/Dockerfile
     image: ghcr.io/rachmataditiya/odoo-rust-mcp:latest
     container_name: odoo-mcp
     ports:

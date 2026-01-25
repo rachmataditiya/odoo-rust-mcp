@@ -1,11 +1,14 @@
 rust-mcp/target/
 rust-mcp/.env
 rust-mcp/.env.*
+rust-mcp/static/dist/
 
 .env
 .env.*
 
 node_modules/
+config-ui/node_modules/
+config-ui/dist/
 
 .DS_Store
 
