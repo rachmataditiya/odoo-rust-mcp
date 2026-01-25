@@ -14,8 +14,13 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BINARY_NAME: rust-mcp
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # =============================================================================
+  # Stage 1: Build React UI (dependency for all other jobs)
+  # =============================================================================
   build-ui:
     name: Build React UI
     runs-on: ubuntu-latest
@@ -45,6 +50,9 @@ jobs:
           path: rust-mcp/static/dist
           retention-days: 1
 
+  # =============================================================================
+  # Stage 2: Build binaries for all platforms (depends on build-ui)
+  # =============================================================================
   build:
     name: Build ${{ matrix.target }}
     needs: build-ui
@@ -53,29 +61,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
-          # Linux ARM64 - disabled due to OpenSSL cross-compilation issues with mcp_rust_sdk dependency
-          # TODO: Re-enable when mcp_rust_sdk supports rustls or vendored OpenSSL
-          # - target: aarch64-unknown-linux-gnu
-          #   os: ubuntu-latest
-          #   archive: tar.gz
-          #   use_cross: true
-          # macOS x86_64
           - target: x86_64-apple-darwin
             os: macos-latest
             archive: tar.gz
-          # macOS ARM64 (Apple Silicon)
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
-          # Windows x86_64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -131,192 +128,84 @@ jobs:
           name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
           path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}
 
-  release:
-    name: Create Release
-    needs: build
+  # =============================================================================
+  # Stage 2: Build and push Docker image (depends on build-ui)
+  # =============================================================================
+  build-docker:
+    name: Build and Push Docker Image
+    needs: build-ui
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          path: artifacts
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get tag name
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Generate SHA256 checksums
-        id: checksums
-        run: |
-          cd artifacts
-          
-          # Generate checksums for each artifact
-          for dir in */; do
-            for file in "$dir"*.tar.gz "$dir"*.zip; do
-              if [ -f "$file" ]; then
-                filename=$(basename "$file")
-                sha256=$(sha256sum "$file" | cut -d' ' -f1)
-                echo "Checksum for $filename: $sha256"
-                
-                # Set outputs based on target
-                if [[ "$filename" == *"aarch64-apple-darwin"* ]]; then
-                  echo "sha256_macos_arm64=$sha256" >> $GITHUB_OUTPUT
-                elif [[ "$filename" == *"x86_64-apple-darwin"* ]]; then
-                  echo "sha256_macos_x64=$sha256" >> $GITHUB_OUTPUT
-                elif [[ "$filename" == *"x86_64-unknown-linux-gnu"* ]]; then
-                  echo "sha256_linux_x64=$sha256" >> $GITHUB_OUTPUT
-                fi
-              fi
-            done
-          done
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: Release ${{ steps.tag.outputs.tag }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  update-homebrew:
-    name: Update Homebrew Formula
-    needs: release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v7
-        with:
-          path: artifacts
-
-      - name: Get tag name
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
           else
             TAG="${GITHUB_REF#refs/tags/}"
             echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+            echo "version=$TAG" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate checksums and update formula
-        run: |
-          cd artifacts
-          
-          # Generate checksums
-          SHA256_MACOS_ARM64=""
-          SHA256_MACOS_X64=""
-          SHA256_LINUX_X64=""
-          
-          for dir in */; do
-            for file in "$dir"*.tar.gz; do
-              if [ -f "$file" ]; then
-                filename=$(basename "$file")
-                sha256=$(sha256sum "$file" | cut -d' ' -f1)
-                
-                if [[ "$filename" == *"aarch64-apple-darwin"* ]]; then
-                  SHA256_MACOS_ARM64=$sha256
-                elif [[ "$filename" == *"x86_64-apple-darwin"* ]]; then
-                  SHA256_MACOS_X64=$sha256
-                elif [[ "$filename" == *"x86_64-unknown-linux-gnu"* ]]; then
-                  SHA256_LINUX_X64=$sha256
-                fi
-              fi
-            done
-          done
-          
-          cd ..
-          
-          # Update formula with new version and checksums
-          sed -i "s/version \".*\"/version \"${{ steps.tag.outputs.version }}\"/" homebrew/Formula/rust-mcp.rb
-          sed -i "s/PLACEHOLDER_SHA256_MACOS_ARM64/$SHA256_MACOS_ARM64/" homebrew/Formula/rust-mcp.rb
-          sed -i "s/PLACEHOLDER_SHA256_MACOS_X64/$SHA256_MACOS_X64/" homebrew/Formula/rust-mcp.rb
-          sed -i "s/PLACEHOLDER_SHA256_LINUX_X64/$SHA256_LINUX_X64/" homebrew/Formula/rust-mcp.rb
-          
-          # Also update any existing checksums (for subsequent releases)
-          sed -i "s/sha256 \"[a-f0-9]\{64\}\"  # macos-arm64/sha256 \"$SHA256_MACOS_ARM64\"  # macos-arm64/" homebrew/Formula/rust-mcp.rb
-          sed -i "s/sha256 \"[a-f0-9]\{64\}\"  # macos-x64/sha256 \"$SHA256_MACOS_X64\"  # macos-x64/" homebrew/Formula/rust-mcp.rb
-          sed -i "s/sha256 \"[a-f0-9]\{64\}\"  # linux-x64/sha256 \"$SHA256_LINUX_X64\"  # linux-x64/" homebrew/Formula/rust-mcp.rb
-          
-          echo "Updated formula:"
-          cat homebrew/Formula/rust-mcp.rb
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
 
-      - name: Commit updated formula to this repo
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add homebrew/Formula/rust-mcp.rb
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update Homebrew formula for ${{ steps.tag.outputs.tag }}"
-            # Fetch latest changes before pushing
-            git fetch origin main
-            # Try to push, handle conflicts gracefully
-            if ! git push origin HEAD:main 2>&1; then
-              echo "Push failed, pulling latest changes and retrying..."
-              git pull origin main --no-edit || git pull origin main --no-rebase || true
-              git push origin HEAD:main || {
-                echo "Warning: Push failed after retry, but continuing workflow"
-                exit 0
-              }
-            fi
-          fi
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./rust-mcp/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          no-cache: true
+          platforms: linux/amd64
 
-      - name: Push to Homebrew tap (if configured)
-        if: ${{ vars.HOMEBREW_TAP_REPO != '' }}
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          HOMEBREW_TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO }}
-        run: |
-          # Skip if token is not set
-          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
-            echo "HOMEBREW_TAP_TOKEN not set, skipping tap update"
-            exit 0
-          fi
-          
-          # Clone the homebrew tap repo
-          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${HOMEBREW_TAP_REPO}.git homebrew-tap
-          
-          # Copy updated formula
-          mkdir -p homebrew-tap/Formula
-          cp homebrew/Formula/rust-mcp.rb homebrew-tap/Formula/
-          
-          # Commit and push
-          cd homebrew-tap
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Update rust-mcp to ${{ steps.tag.outputs.tag }}" || echo "No changes to commit"
-          git push
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.version }}
+          artifact-name: sbom-docker.spdx.json
+          output-file: ./sbom-docker.spdx.json
 
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v6
+        with:
+          name: sbom-docker
+          path: ./sbom-docker.spdx.json
+          if-no-files-found: warn
+
+  # =============================================================================
+  # Stage 2: Build Debian package (depends on build-ui and build)
+  # =============================================================================
   build-deb:
     name: Build Debian Package
-    needs: [build, build-ui]
+    needs: [build-ui, build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -356,13 +245,179 @@ jobs:
           name: rust-mcp-${{ matrix.arch }}.deb
           path: rust-mcp/target/${{ matrix.target }}/debian/*.deb
 
+  # =============================================================================
+  # Stage 3: Create GitHub Release (depends on build, build-docker, build-deb)
+  # =============================================================================
+  release:
+    name: Create GitHub Release
+    needs: [build, build-docker, build-deb]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Get tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate SHA256 checksums
+        id: checksums
+        run: |
+          cd artifacts
+          for dir in */; do
+            for file in "$dir"*.tar.gz "$dir"*.zip; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                sha256=$(sha256sum "$file" | cut -d' ' -f1)
+                echo "Checksum for $filename: $sha256"
+                if [[ "$filename" == *"aarch64-apple-darwin"* ]]; then
+                  echo "sha256_macos_arm64=$sha256" >> $GITHUB_OUTPUT
+                elif [[ "$filename" == *"x86_64-apple-darwin"* ]]; then
+                  echo "sha256_macos_x64=$sha256" >> $GITHUB_OUTPUT
+                elif [[ "$filename" == *"x86_64-unknown-linux-gnu"* ]]; then
+                  echo "sha256_linux_x64=$sha256" >> $GITHUB_OUTPUT
+                fi
+              fi
+            done
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # =============================================================================
+  # Stage 4: Update Homebrew Formula (depends on release)
+  # =============================================================================
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Get tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate checksums and update formula
+        run: |
+          cd artifacts
+          SHA256_MACOS_ARM64=""
+          SHA256_MACOS_X64=""
+          SHA256_LINUX_X64=""
+          
+          for dir in */; do
+            for file in "$dir"*.tar.gz; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                sha256=$(sha256sum "$file" | cut -d' ' -f1)
+                if [[ "$filename" == *"aarch64-apple-darwin"* ]]; then
+                  SHA256_MACOS_ARM64=$sha256
+                elif [[ "$filename" == *"x86_64-apple-darwin"* ]]; then
+                  SHA256_MACOS_X64=$sha256
+                elif [[ "$filename" == *"x86_64-unknown-linux-gnu"* ]]; then
+                  SHA256_LINUX_X64=$sha256
+                fi
+              fi
+            done
+          done
+          
+          cd ..
+          
+          # Update formula
+          sed -i "s/version \".*\"/version \"${{ steps.tag.outputs.version }}\"/" homebrew/Formula/rust-mcp.rb
+          sed -i "s/PLACEHOLDER_SHA256_MACOS_ARM64/$SHA256_MACOS_ARM64/" homebrew/Formula/rust-mcp.rb
+          sed -i "s/PLACEHOLDER_SHA256_MACOS_X64/$SHA256_MACOS_X64/" homebrew/Formula/rust-mcp.rb
+          sed -i "s/PLACEHOLDER_SHA256_LINUX_X64/$SHA256_LINUX_X64/" homebrew/Formula/rust-mcp.rb
+          sed -i "s/sha256 \"[a-f0-9]\{64\}\"  # macos-arm64/sha256 \"$SHA256_MACOS_ARM64\"  # macos-arm64/" homebrew/Formula/rust-mcp.rb
+          sed -i "s/sha256 \"[a-f0-9]\{64\}\"  # macos-x64/sha256 \"$SHA256_MACOS_X64\"  # macos-x64/" homebrew/Formula/rust-mcp.rb
+          sed -i "s/sha256 \"[a-f0-9]\{64\}\"  # linux-x64/sha256 \"$SHA256_LINUX_X64\"  # linux-x64/" homebrew/Formula/rust-mcp.rb
+
+      - name: Commit updated formula
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add homebrew/Formula/rust-mcp.rb
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update Homebrew formula for ${{ steps.tag.outputs.tag }}"
+            git fetch origin main
+            if ! git push origin HEAD:main 2>&1; then
+              git pull origin main --no-edit || git pull origin main --no-rebase || true
+              git push origin HEAD:main || exit 0
+            fi
+          fi
+
+      - name: Push to Homebrew tap (if configured)
+        if: ${{ vars.HOMEBREW_TAP_REPO != '' }}
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO }}
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "HOMEBREW_TAP_TOKEN not set, skipping tap update"
+            exit 0
+          fi
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${HOMEBREW_TAP_REPO}.git homebrew-tap
+          mkdir -p homebrew-tap/Formula
+          cp homebrew/Formula/rust-mcp.rb homebrew-tap/Formula/
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Update rust-mcp to ${{ steps.tag.outputs.tag }}" || echo "No changes to commit"
+          git push
+
+  # =============================================================================
+  # Stage 4: Update APT Repository (depends on release, build-deb)
+  # =============================================================================
   update-apt-repo:
     name: Update APT Repository
     needs: [release, build-deb]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    # Only run if APT_REPO_ENABLED variable is set
     if: ${{ vars.APT_REPO_ENABLED == 'true' }}
     steps:
       - name: Checkout
@@ -397,12 +452,10 @@ jobs:
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           echo "$APT_GPG_PRIVATE_KEY" | base64 -d | gpg --batch --import
-          # Export public key
           gpg --armor --export > apt-repo/pubkey.gpg
 
       - name: Fetch existing APT repo from gh-pages
         run: |
-          # Try to fetch gh-pages and copy existing repo data
           git fetch origin gh-pages || echo "No gh-pages branch yet"
           if git show origin/gh-pages:dists 2>/dev/null; then
             git checkout origin/gh-pages -- dists pool 2>/dev/null || true
@@ -418,32 +471,121 @@ jobs:
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           cd apt-repo
-          
-          # Add each deb file to the repository
           for deb in ../debs/*.deb; do
             if [ -f "$deb" ]; then
               echo "Adding $deb to repository"
               reprepro --ask-passphrase includedeb stable "$deb" <<< "$APT_GPG_PASSPHRASE"
             fi
           done
-          
-          # List repository contents
           reprepro list stable
 
       - name: Deploy to GitHub Pages
         run: |
           cd apt-repo
-          
-          # Configure git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Initialize or update gh-pages branch
           git init
           git checkout -b gh-pages
           git add -A
           git commit -m "Update APT repository for ${{ steps.tag.outputs.tag }}"
-          
-          # Force push to gh-pages
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push -f origin gh-pages
+
+  # =============================================================================
+  # Stage 5: Installation Tests (depends on update-homebrew, update-apt-repo)
+  # =============================================================================
+  test-homebrew:
+    name: Test Homebrew (macOS)
+    needs: update-homebrew
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install from Homebrew tap
+        run: |
+          brew untap rachmataditiya/odoo-rust-mcp 2>/dev/null || true
+          brew tap rachmataditiya/odoo-rust-mcp
+          brew install rust-mcp
+          chmod +x "$(brew --prefix)/bin/rust-mcp-service" 2>/dev/null || true
+
+      - name: Verify installation
+        run: |
+          command -v rust-mcp && echo "PASS: rust-mcp installed"
+          command -v rust-mcp-service && echo "PASS: rust-mcp-service installed"
+          rust-mcp --help
+          
+          SHARE_DIR="$(brew --prefix)/share/odoo-rust-mcp"
+          for f in tools.json prompts.json server.json; do
+            [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists"
+          done
+
+      - name: Cleanup
+        run: |
+          brew uninstall rust-mcp || true
+          brew untap rachmataditiya/odoo-rust-mcp || true
+
+  test-apt:
+    name: Test APT Package (Linux)
+    needs: update-apt-repo
+    runs-on: ubuntu-latest
+    if: ${{ vars.APT_REPO_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Add APT repository and install
+        run: |
+          curl -fsSL https://rachmataditiya.github.io/odoo-rust-mcp/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/rust-mcp.gpg
+          echo "deb [signed-by=/usr/share/keyrings/rust-mcp.gpg] https://rachmataditiya.github.io/odoo-rust-mcp stable main" | sudo tee /etc/apt/sources.list.d/rust-mcp.list
+          sudo apt-get update
+          sudo apt-get install -y rust-mcp
+
+      - name: Verify installation
+        run: |
+          [ -f "/usr/bin/rust-mcp" ] && echo "PASS: rust-mcp installed"
+          rust-mcp --help
+          
+          SHARE_DIR="/usr/share/rust-mcp"
+          for f in tools.json prompts.json server.json; do
+            [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists"
+          done
+
+      - name: Cleanup
+        run: sudo apt-get remove -y rust-mcp || true
+
+  test-install-script:
+    name: Test Install Scripts
+    needs: release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test install script (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p test-release && cd test-release
+          curl -sL "https://github.com/rachmataditiya/odoo-rust-mcp/releases/latest/download/rust-mcp-x86_64-unknown-linux-gnu.tar.gz" | tar xz
+          cp ../scripts/install.sh . && chmod +x install.sh
+          PREFIX="$HOME/.local" ./install.sh
+          [ -f "$HOME/.local/bin/rust-mcp" ] && echo "PASS: Binary installed"
+          $HOME/.local/bin/rust-mcp --help
+          PREFIX="$HOME/.local" ./install.sh uninstall
+          [ ! -f "$HOME/.local/bin/rust-mcp" ] && echo "PASS: Binary removed"
+
+      - name: Test install script (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path test-release
+          $url = "https://github.com/rachmataditiya/odoo-rust-mcp/releases/latest/download/rust-mcp-x86_64-pc-windows-msvc.zip"
+          Invoke-WebRequest -Uri $url -OutFile test-release/release.zip
+          Expand-Archive -Path test-release/release.zip -DestinationPath test-release -Force
+          
+          # Verify binary
+          if (Test-Path test-release/rust-mcp.exe) {
+            Write-Host "PASS: Binary exists"
+            & test-release/rust-mcp.exe --help
+          }
