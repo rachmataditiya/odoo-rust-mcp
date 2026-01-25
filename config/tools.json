@@ -92,6 +92,7 @@
     {
       "name": "odoo_create",
       "description": "Create a new Odoo record. Returns the ID of the created record.",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -116,6 +117,7 @@
     {
       "name": "odoo_update",
       "description": "Update existing Odoo records. Returns true on success.",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -142,6 +144,7 @@
     {
       "name": "odoo_delete",
       "description": "Delete Odoo records. Returns true on success. Use with caution!",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -166,6 +169,7 @@
     {
       "name": "odoo_execute",
       "description": "Execute arbitrary method on Odoo model. For advanced operations and custom methods.",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -218,6 +222,7 @@
     {
       "name": "odoo_workflow_action",
       "description": "Execute workflow action/button on records (e.g., confirm sale order, post invoice).",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -466,6 +471,7 @@
     {
       "name": "odoo_copy",
       "description": "Duplicate a record. Returns the ID of the new copy.",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -574,6 +580,7 @@
     {
       "name": "odoo_create_batch",
       "description": "Create multiple records in a single operation. More efficient than calling odoo_create multiple times.",
+      "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
       "inputSchema": {
         "type": "object",
         "properties": {

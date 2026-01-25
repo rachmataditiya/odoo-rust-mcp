@@ -384,29 +384,24 @@
         <!-- Tools Tab -->
         <div id="tools" class="tab-content">
             <div class="info-box">
-                🛠️ Define available tools that clients can call. This is an array of tool definitions with schemas.
+                🛠️ Define available tools that clients can call. Enable/disable tools by category for better security control.
+            </div>
+
+            <!-- Tool Categories Toggle -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">🔐 Tool Access Control</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">
+                    Control which tools are available by enabling/disabling categories. Changes are saved automatically.
+                </p>
+                
+                <div id="tool-categories" style="display: grid; gap: 15px;">
+                    <!-- Categories will be populated by JavaScript -->
+                </div>
             </div>
 
             <div class="editor-wrapper">
                 <label for="tools-editor">Tools Configuration (JSON Array)</label>
                 <textarea id="tools-editor" placeholder='[{"name": "tool_name", "description": "...", "inputSchema": {...}}]'></textarea>
-                
-                <div style="margin-top: 15px; padding: 12px; background: #f9fafb; border-radius: 5px; border-left: 3px solid #f59e0b;">
-                    <h3 style="margin-bottom: 10px; color: #92400e;">⚙️ Tool Flags</h3>
-                    <p style="font-size: 12px; color: #78350f; margin-bottom: 10px;">Control which tools are enabled via environment variables:</p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <label style="display: flex; align-items: center; font-weight: normal; color: #333;">
-                            <input type="checkbox" id="tool-cleanup-flag" style="margin-right: 8px; cursor: pointer;">
-                            ODOO_ENABLE_CLEANUP_TOOLS
-                        </label>
-                        <div style="font-size: 12px; color: #666;">
-                            Enables: database_cleanup, deep_cleanup
-                        </div>
-                    </div>
-                    <p style="font-size: 11px; color: #78350f; margin-top: 8px; margin-bottom: 0;">
-                        When enabled, tools with <code style="background: white; padding: 2px 4px;">requiresEnvTrue</code> guard will be available.
-                    </p>
-                </div>
 
                 <div class="status" id="tools-status"></div>
                 <div class="button-group">
@@ -522,29 +517,135 @@
             await saveConfig('server', 'server-editor', 'server-status');
         }
 
+        // Tool categories configuration
+        const TOOL_CATEGORIES = {
+            'ODOO_ENABLE_WRITE_TOOLS': {
+                name: 'Write Operations',
+                description: 'Create, update, delete, and modify records',
+                icon: '✏️',
+                color: '#ef4444',
+                bgColor: '#fef2f2',
+                tools: ['odoo_create', 'odoo_update', 'odoo_delete', 'odoo_execute', 'odoo_workflow_action', 'odoo_copy', 'odoo_create_batch']
+            },
+            'ODOO_ENABLE_CLEANUP_TOOLS': {
+                name: 'Destructive Cleanup',
+                description: 'Database cleanup and deep cleanup operations',
+                icon: '🗑️',
+                color: '#dc2626',
+                bgColor: '#fee2e2',
+                tools: ['odoo_database_cleanup', 'odoo_deep_cleanup']
+            }
+        };
+
         async function loadTools() {
             await fetchConfig('tools', 'tools-editor', 'tools-status');
-            updateToolsFlagUI();
+            updateToolCategoriesUI();
         }
 
-        async function updateToolsFlagUI() {
-            // Read tools config
+        function updateToolCategoriesUI() {
             const editorText = document.getElementById('tools-editor').value;
+            const container = document.getElementById('tool-categories');
+            
             try {
                 const tools = JSON.parse(editorText);
-                // Check if any tool has ODOO_ENABLE_CLEANUP_TOOLS guard
-                const hasCleanupTools = Array.isArray(tools) && tools.some(tool => 
-                    tool.guards && tool.guards.requiresEnvTrue === 'ODOO_ENABLE_CLEANUP_TOOLS'
-                );
-                document.getElementById('tool-cleanup-flag').checked = hasCleanupTools;
+                if (!Array.isArray(tools)) return;
+
+                container.innerHTML = '';
+
+                // Create category cards
+                Object.entries(TOOL_CATEGORIES).forEach(([envVar, category]) => {
+                    const categoryTools = tools.filter(tool => category.tools.includes(tool.name));
+                    const isEnabled = categoryTools.some(tool => 
+                        tool.guards && tool.guards.requiresEnvTrue === envVar
+                    );
+
+                    const card = document.createElement('div');
+                    card.style.cssText = `
+                        padding: 15px;
+                        background: ${category.bgColor};
+                        border-radius: 8px;
+                        border: 2px solid ${isEnabled ? category.color : '#e5e7eb'};
+                        transition: all 0.3s;
+                    `;
+
+                    const checkboxId = `tool-flag-${envVar}`;
+                    card.innerHTML = `
+                        <div style="display: flex; align-items: start; gap: 12px;">
+                            <input type="checkbox" id="${checkboxId}" ${isEnabled ? 'checked' : ''} 
+                                   style="margin-top: 4px; width: 20px; height: 20px; cursor: pointer; accent-color: ${category.color};">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <span style="font-size: 20px;">${category.icon}</span>
+                                    <label for="${checkboxId}" style="font-weight: 600; color: #333; cursor: pointer; font-size: 15px;">
+                                        ${category.name}
+                                    </label>
+                                    <span style="padding: 2px 8px; background: ${isEnabled ? category.color : '#9ca3af'}; color: white; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                                        ${isEnabled ? 'ENABLED' : 'DISABLED'}
+                                    </span>
+                                </div>
+                                <p style="font-size: 12px; color: #666; margin: 4px 0 8px 0;">
+                                    ${category.description}
+                                </p>
+                                <div style="font-size: 11px; color: #666; margin-top: 8px;">
+                                    <strong>Environment Variable:</strong> <code style="background: white; padding: 2px 6px; border-radius: 3px;">${envVar}</code>
+                                </div>
+                                <div style="margin-top: 8px; font-size: 11px; color: #666;">
+                                    <strong>Tools (${categoryTools.length}):</strong> 
+                                    <span style="color: #333;">${categoryTools.map(t => t.name).join(', ')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Add change listener
+                    const checkbox = card.querySelector(`#${checkboxId}`);
+                    checkbox.addEventListener('change', () => {
+                        updateToolsGuards(envVar, checkbox.checked);
+                    });
+
+                    container.appendChild(card);
+                });
+
+                // Add read-only tools info
+                const readOnlyTools = tools.filter(tool => {
+                    const hasGuard = tool.guards && tool.guards.requiresEnvTrue;
+                    return !hasGuard && !Object.values(TOOL_CATEGORIES).some(cat => cat.tools.includes(tool.name));
+                });
+
+                if (readOnlyTools.length > 0) {
+                    const readOnlyCard = document.createElement('div');
+                    readOnlyCard.style.cssText = `
+                        padding: 15px;
+                        background: #f0f9ff;
+                        border-radius: 8px;
+                        border: 2px solid #bfdbfe;
+                    `;
+                    readOnlyCard.innerHTML = `
+                        <div style="display: flex; align-items: start; gap: 12px;">
+                            <span style="font-size: 20px;">📖</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #333; margin-bottom: 6px; font-size: 15px;">
+                                    Read-Only Tools (Always Enabled)
+                                </div>
+                                <p style="font-size: 12px; color: #666; margin: 4px 0 8px 0;">
+                                    These tools are safe and always available. They only read data, never modify.
+                                </p>
+                                <div style="font-size: 11px; color: #666;">
+                                    <strong>Tools (${readOnlyTools.length}):</strong> 
+                                    <span style="color: #333;">${readOnlyTools.map(t => t.name).join(', ')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(readOnlyCard);
+                }
+
             } catch (e) {
-                // Invalid JSON, ignore
+                console.error('Error parsing tools:', e);
             }
         }
 
-        function saveTools() {
-            // Get current state
-            const isCleanupEnabled = document.getElementById('tool-cleanup-flag').checked;
+        function updateToolsGuards(envVar, enabled) {
             const editor = document.getElementById('tools-editor');
             
             try {
@@ -553,12 +654,15 @@
                     throw new Error('Tools must be an array');
                 }
 
-                // Find and update cleanup tools guards
+                const category = TOOL_CATEGORIES[envVar];
+                if (!category) return;
+
+                // Update guards for tools in this category
                 tools.forEach(tool => {
-                    if (tool.name === 'odoo_database_cleanup' || tool.name === 'odoo_deep_cleanup') {
-                        if (isCleanupEnabled) {
+                    if (category.tools.includes(tool.name)) {
+                        if (enabled) {
                             tool.guards = tool.guards || {};
-                            tool.guards.requiresEnvTrue = 'ODOO_ENABLE_CLEANUP_TOOLS';
+                            tool.guards.requiresEnvTrue = envVar;
                         } else {
                             if (tool.guards) {
                                 delete tool.guards.requiresEnvTrue;
@@ -573,24 +677,22 @@
                 // Update editor with modified tools
                 editor.value = JSON.stringify(tools, null, 2);
                 
-                // Save to server
-                saveConfig('tools', 'tools-editor', 'tools-status');
+                // Save to server automatically
+                saveConfig('tools', 'tools-editor', 'tools-status').then(() => {
+                    // Update UI to reflect changes
+                    updateToolCategoriesUI();
+                });
             } catch (error) {
                 const status = document.getElementById('tools-status');
                 showStatus(status, `❌ Error: ${error.message}`, 'error');
             }
         }
 
-        // Update flag listener
-        document.addEventListener('DOMContentLoaded', () => {
-            const flagCheckbox = document.getElementById('tool-cleanup-flag');
-            if (flagCheckbox) {
-                flagCheckbox.addEventListener('change', () => {
-                    // When flag changes, update the tools and save
-                    saveTools();
-                });
-            }
-        });
+        function saveTools() {
+            saveConfig('tools', 'tools-editor', 'tools-status').then(() => {
+                updateToolCategoriesUI();
+            });
+        }
 
         async function loadPrompts() {
             await fetchConfig('prompts', 'prompts-editor', 'prompts-status');
@@ -660,6 +762,17 @@
         window.addEventListener('load', () => {
             loadInstances();
         });
+
+        // Update tool categories when tools tab is shown
+        const originalSwitchTab = switchTab;
+        switchTab = function(tabName) {
+            originalSwitchTab(tabName);
+            if (tabName === 'tools') {
+                setTimeout(() => {
+                    updateToolCategoriesUI();
+                }, 100);
+            }
+        };
     </script>
 </body>
 </html>
