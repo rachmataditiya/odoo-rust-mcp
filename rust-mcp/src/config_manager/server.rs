@@ -33,23 +33,24 @@ pub async fn start_config_server(port: u16, config_dir: std::path::PathBuf) -> a
 
     // Try 1: Relative to current working directory
     let static_dir = std::path::Path::new("static/dist");
-    if static_dir.exists() && static_dir.is_dir() {
-        if let Ok(canonical) = static_dir.canonicalize() {
-            static_dir_abs = Some(canonical);
-        }
+    if static_dir.exists()
+        && static_dir.is_dir()
+        && let Ok(canonical) = static_dir.canonicalize()
+    {
+        static_dir_abs = Some(canonical);
     }
 
     // Try 2: Relative to executable location (for installed binaries)
-    if static_dir_abs.is_none() {
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(exe_dir) = exe_path.parent() {
-                let candidate = exe_dir.join("static/dist");
-                if candidate.exists() && candidate.is_dir() {
-                    if let Ok(canonical) = candidate.canonicalize() {
-                        static_dir_abs = Some(canonical);
-                    }
-                }
-            }
+    if static_dir_abs.is_none()
+        && let Ok(exe_path) = std::env::current_exe()
+        && let Some(exe_dir) = exe_path.parent()
+    {
+        let candidate = exe_dir.join("static/dist");
+        if candidate.exists()
+            && candidate.is_dir()
+            && let Ok(canonical) = candidate.canonicalize()
+        {
+            static_dir_abs = Some(canonical);
         }
     }
 
@@ -70,14 +71,15 @@ pub async fn start_config_server(port: u16, config_dir: std::path::PathBuf) -> a
     }
 
     // Try 4: Relative to project root (for development)
-    if static_dir_abs.is_none() {
-        if let Ok(current_dir) = std::env::current_dir() {
-            let candidate = current_dir.join("rust-mcp/static/dist");
-            if candidate.exists() && candidate.is_dir() {
-                if let Ok(canonical) = candidate.canonicalize() {
-                    static_dir_abs = Some(canonical);
-                }
-            }
+    if static_dir_abs.is_none()
+        && let Ok(current_dir) = std::env::current_dir()
+    {
+        let candidate = current_dir.join("rust-mcp/static/dist");
+        if candidate.exists()
+            && candidate.is_dir()
+            && let Ok(canonical) = candidate.canonicalize()
+        {
+            static_dir_abs = Some(canonical);
         }
     }
 
