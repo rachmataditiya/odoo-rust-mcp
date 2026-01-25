@@ -77,7 +77,7 @@ config:
 # =============================================================================
 configServer:
   enabled: true
-  port: 3000
+  port: 3008
   # Security: bind only to localhost in production, use reverse proxy
   bindAddress: "127.0.0.1"
 
