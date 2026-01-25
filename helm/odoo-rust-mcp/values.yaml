@@ -73,11 +73,29 @@ config:
   server: ""
 
 # =============================================================================
+# Config Server Configuration (Web UI for editing configs)
+# =============================================================================
+configServer:
+  enabled: true
+  port: 3000
+  # Security: bind only to localhost in production, use reverse proxy
+  bindAddress: "127.0.0.1"
+
+# =============================================================================
 # Service Configuration
 # =============================================================================
 service:
   type: ClusterIP
-  port: 8787
+  # Multiple ports: MCP server + Config server
+  ports:
+    - name: mcp
+      port: 8787
+      targetPort: 8787
+      protocol: TCP
+    - name: config-ui
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
   annotations: {}
 
 # =============================================================================

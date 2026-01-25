@@ -71,9 +71,14 @@ spec:
           image: {{ include "odoo-rust-mcp.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
+            - name: mcp
               containerPort: 8787
               protocol: TCP
+            {{- if .Values.configServer.enabled }}
+            - name: config-ui
+              containerPort: {{ .Values.configServer.port }}
+              protocol: TCP
+            {{- end }}
           env:
             # Odoo Configuration
             {{- if .Values.odoo.url }}
@@ -138,6 +143,10 @@ spec:
             {{- end }}
             - name: RUST_LOG
               value: {{ .Values.mcp.logLevel | quote }}
+            {{- if .Values.configServer.enabled }}
+            - name: ODOO_CONFIG_SERVER_PORT
+              value: {{ .Values.configServer.port | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odoo Rust MCP - Config Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .editor-wrapper {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea {
+            min-height: 400px;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #d1fae5;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: #7f1d1d;
+            border: 1px solid #fee2e2;
+        }
+
+        .status.loading {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .instances-list {
+            background: #f9fafb;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .instance-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .instance-info {
+            flex: 1;
+        }
+
+        .instance-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .instance-url {
+            color: #666;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #f0f9ff;
+            border-left: 3px solid #3b82f6;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+
+        .advanced-options {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 5px;
+            border: 1px dashed #ddd;
+        }
+
+        .advanced-options summary {
+            cursor: pointer;
+            font-weight: 500;
+            color: #667eea;
+        }
+
+        .advanced-options summary:hover {
+            color: #5568d3;
+        }
+
+        .advanced-options > div {
+            margin-top: 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 30px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            header {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .tabs {
+                gap: 5px;
+            }
+
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            textarea {
+                min-height: 250px;
+                font-size: 12px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Odoo Rust MCP Config Manager</h1>
+            <p class="subtitle">Edit and manage your Odoo MCP server configuration in real-time</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('instances')">🏢 Instances</button>
+            <button class="tab-btn" onclick="switchTab('server')">⚙️ Server</button>
+            <button class="tab-btn" onclick="switchTab('tools')">🛠️ Tools</button>
+            <button class="tab-btn" onclick="switchTab('prompts')">💬 Prompts</button>
+        </div>
+
+        <!-- Instances Tab -->
+        <div id="instances" class="tab-content active">
+            <div class="info-box">
+                📌 Configure Odoo instances that this MCP server can connect to. Changes are applied immediately.
+            </div>
+
+            <div class="editor-wrapper">
+                <label for="instances-editor">Instances Configuration (JSON)</label>
+                <textarea id="instances-editor" placeholder='{"default": {"url": "http://localhost:8069", "apiKey": "YOUR_KEY"}}'></textarea>
+                <div class="status" id="instances-status"></div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="saveInstances()">💾 Save Instances</button>
+                    <button class="btn-secondary" onclick="loadInstances()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <div class="instances-list" id="instances-list-container" style="display: none;">
+                <h3 style="margin-bottom: 10px; color: #333;">Active Instances</h3>
+                <div id="instances-list"></div>
+            </div>
+        </div>
+
+        <!-- Server Tab -->
+        <div id="server" class="tab-content">
+            <div class="info-box">
+                ⚙️ Configure server metadata and behavior settings. These affect how the MCP server is presented to clients.
+            </div>
+
+            <div class="editor-wrapper">
+                <label for="server-editor">Server Configuration (JSON)</label>
+                <textarea id="server-editor" placeholder='{"serverName": "odoo-rust-mcp", "instructions": "..."}'></textarea>
+                <div class="status" id="server-status"></div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="saveServer()">💾 Save Server Config</button>
+                    <button class="btn-secondary" onclick="loadServer()">🔄 Refresh</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Tab -->
+        <div id="tools" class="tab-content">
+            <div class="info-box">
+                🛠️ Define available tools that clients can call. This is an array of tool definitions with schemas.
+            </div>
+
+            <div class="editor-wrapper">
+                <label for="tools-editor">Tools Configuration (JSON Array)</label>
+                <textarea id="tools-editor" placeholder='[{"name": "tool_name", "description": "...", "inputSchema": {...}}]'></textarea>
+                
+                <div style="margin-top: 15px; padding: 12px; background: #f9fafb; border-radius: 5px; border-left: 3px solid #f59e0b;">
+                    <h3 style="margin-bottom: 10px; color: #92400e;">⚙️ Tool Flags</h3>
+                    <p style="font-size: 12px; color: #78350f; margin-bottom: 10px;">Control which tools are enabled via environment variables:</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display: flex; align-items: center; font-weight: normal; color: #333;">
+                            <input type="checkbox" id="tool-cleanup-flag" style="margin-right: 8px; cursor: pointer;">
+                            ODOO_ENABLE_CLEANUP_TOOLS
+                        </label>
+                        <div style="font-size: 12px; color: #666;">
+                            Enables: database_cleanup, deep_cleanup
+                        </div>
+                    </div>
+                    <p style="font-size: 11px; color: #78350f; margin-top: 8px; margin-bottom: 0;">
+                        When enabled, tools with <code style="background: white; padding: 2px 4px;">requiresEnvTrue</code> guard will be available.
+                    </p>
+                </div>
+
+                <div class="status" id="tools-status"></div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="saveTools()">💾 Save Tools</button>
+                    <button class="btn-secondary" onclick="loadTools()">🔄 Refresh</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompts Tab -->
+        <div id="prompts" class="tab-content">
+            <div class="info-box">
+                💬 Define system prompts that guide the MCP server's behavior and responses.
+            </div>
+
+            <div class="editor-wrapper">
+                <label for="prompts-editor">Prompts Configuration (JSON Array)</label>
+                <textarea id="prompts-editor" placeholder='[{"name": "prompt_name", "description": "...", "arguments": [...]}]'></textarea>
+                <div class="status" id="prompts-status"></div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="savePrompts()">💾 Save Prompts</button>
+                    <button class="btn-secondary" onclick="loadPrompts()">🔄 Refresh</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🔄 Hot reload enabled • Changes apply immediately to the running server</p>
+            <p style="margin-top: 10px; opacity: 0.7;">Odoo Rust MCP Server • Config UI</p>
+        </footer>
+    </div>
+
+    <script>
+        const API_BASE = '/api/config';
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Load content for the tab
+            switch (tabName) {
+                case 'instances':
+                    loadInstances();
+                    break;
+                case 'server':
+                    loadServer();
+                    break;
+                case 'tools':
+                    loadTools();
+                    break;
+                case 'prompts':
+                    loadPrompts();
+                    break;
+            }
+        }
+
+        async function loadInstances() {
+            await fetchConfig('instances', 'instances-editor', 'instances-status');
+            await displayInstances();
+        }
+
+        async function displayInstances() {
+            try {
+                const response = await fetch(`${API_BASE}/instances`);
+                if (!response.ok) throw new Error('Failed to load instances');
+
+                const data = await response.json();
+                const container = document.getElementById('instances-list-container');
+                const list = document.getElementById('instances-list');
+
+                if (Object.keys(data).length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                container.style.display = 'block';
+                list.innerHTML = '';
+
+                Object.entries(data).forEach(([name, config]) => {
+                    const item = document.createElement('div');
+                    item.className = 'instance-item';
+                    item.innerHTML = `
+                        <div class="instance-info">
+                            <div class="instance-name">${name}</div>
+                            <div class="instance-url">${config.url || 'N/A'}</div>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Error displaying instances:', error);
+            }
+        }
+
+        async function saveInstances() {
+            await saveConfig('instances', 'instances-editor', 'instances-status');
+        }
+
+        async function loadServer() {
+            await fetchConfig('server', 'server-editor', 'server-status');
+        }
+
+        async function saveServer() {
+            await saveConfig('server', 'server-editor', 'server-status');
+        }
+
+        async function loadTools() {
+            await fetchConfig('tools', 'tools-editor', 'tools-status');
+            updateToolsFlagUI();
+        }
+
+        async function updateToolsFlagUI() {
+            // Read tools config
+            const editorText = document.getElementById('tools-editor').value;
+            try {
+                const tools = JSON.parse(editorText);
+                // Check if any tool has ODOO_ENABLE_CLEANUP_TOOLS guard
+                const hasCleanupTools = Array.isArray(tools) && tools.some(tool => 
+                    tool.guards && tool.guards.requiresEnvTrue === 'ODOO_ENABLE_CLEANUP_TOOLS'
+                );
+                document.getElementById('tool-cleanup-flag').checked = hasCleanupTools;
+            } catch (e) {
+                // Invalid JSON, ignore
+            }
+        }
+
+        function saveTools() {
+            // Get current state
+            const isCleanupEnabled = document.getElementById('tool-cleanup-flag').checked;
+            const editor = document.getElementById('tools-editor');
+            
+            try {
+                const tools = JSON.parse(editor.value);
+                if (!Array.isArray(tools)) {
+                    throw new Error('Tools must be an array');
+                }
+
+                // Find and update cleanup tools guards
+                tools.forEach(tool => {
+                    if (tool.name === 'odoo_database_cleanup' || tool.name === 'odoo_deep_cleanup') {
+                        if (isCleanupEnabled) {
+                            tool.guards = tool.guards || {};
+                            tool.guards.requiresEnvTrue = 'ODOO_ENABLE_CLEANUP_TOOLS';
+                        } else {
+                            if (tool.guards) {
+                                delete tool.guards.requiresEnvTrue;
+                                if (Object.keys(tool.guards).length === 0) {
+                                    delete tool.guards;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Update editor with modified tools
+                editor.value = JSON.stringify(tools, null, 2);
+                
+                // Save to server
+                saveConfig('tools', 'tools-editor', 'tools-status');
+            } catch (error) {
+                const status = document.getElementById('tools-status');
+                showStatus(status, `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update flag listener
+        document.addEventListener('DOMContentLoaded', () => {
+            const flagCheckbox = document.getElementById('tool-cleanup-flag');
+            if (flagCheckbox) {
+                flagCheckbox.addEventListener('change', () => {
+                    // When flag changes, update the tools and save
+                    saveTools();
+                });
+            }
+        });
+
+        async function loadPrompts() {
+            await fetchConfig('prompts', 'prompts-editor', 'prompts-status');
+        }
+
+        async function savePrompts() {
+            await saveConfig('prompts', 'prompts-editor', 'prompts-status');
+        }
+
+        async function fetchConfig(endpoint, editorId, statusId) {
+            const editor = document.getElementById(editorId);
+            const status = document.getElementById(statusId);
+
+            try {
+                showStatus(status, '⏳ Loading...', 'loading');
+                const response = await fetch(`${API_BASE}/${endpoint}`);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                editor.value = JSON.stringify(data, null, 2);
+                showStatus(status, '✅ Loaded successfully', 'success');
+
+                setTimeout(() => status.classList.remove('show'), 2000);
+            } catch (error) {
+                showStatus(status, `❌ Error: ${error.message}`, 'error');
+                console.error('Fetch error:', error);
+            }
+        }
+
+        async function saveConfig(endpoint, editorId, statusId) {
+            const editor = document.getElementById(editorId);
+            const status = document.getElementById(statusId);
+
+            try {
+                const text = editor.value.trim();
+                if (!text) throw new Error('Configuration is empty');
+
+                const config = JSON.parse(text);
+                showStatus(status, '⏳ Saving...', 'loading');
+
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || `HTTP ${response.status}`);
+                }
+
+                showStatus(status, '✅ Saved successfully! Hot reload applied.', 'success');
+                setTimeout(() => status.classList.remove('show'), 3000);
+            } catch (error) {
+                showStatus(status, `❌ Error: ${error.message}`, 'error');
+                console.error('Save error:', error);
+            }
+        }
+
+        function showStatus(element, message, type) {
+            element.textContent = message;
+            element.className = `status show ${type}`;
+        }
+
+        // Load instances on page load
+        window.addEventListener('load', () => {
+            loadInstances();
+        });
+    </script>
+</body>
+</html>

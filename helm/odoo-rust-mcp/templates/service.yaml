@@ -11,9 +11,6 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
-      protocol: TCP
-      name: http
+    {{- toYaml .Values.service.ports | nindent 4 }}
   selector:
     {{- include "odoo-rust-mcp.selectorLabels" . | nindent 4 }}

@@ -35,7 +35,7 @@ spec:
               service:
                 name: {{ include "odoo-rust-mcp.fullname" $ }}
                 port:
-                  number: {{ $.Values.service.port }}
+                  name: mcp
           {{- end }}
     {{- end }}
 {{- end }}

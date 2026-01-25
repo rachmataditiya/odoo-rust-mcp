@@ -3,5 +3,6 @@
 #![allow(clippy::result_large_err)]
 
 pub mod cleanup;
+pub mod config_manager;
 pub mod mcp;
 pub mod odoo;

@@ -9,6 +9,7 @@ use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tracing::{error, info, warn};
 
+use rust_mcp::config_manager::start_config_server;
 use rust_mcp::mcp::McpOdooHandler;
 use rust_mcp::mcp::cursor_stdio::CursorStdioTransport;
 use rust_mcp::mcp::http as mcp_http;
@@ -184,6 +185,10 @@ struct Cli {
     /// Enable destructive cleanup tools (off by default)
     #[arg(long, env = "ODOO_ENABLE_CLEANUP_TOOLS", default_value_t = false)]
     enable_cleanup_tools: bool,
+
+    /// Enable config server on separate port (e.g., 3000)
+    #[arg(long, env = "ODOO_CONFIG_SERVER_PORT")]
+    config_server_port: Option<u16>,
 }
 
 #[derive(Debug, Parser)]
@@ -226,6 +231,20 @@ async fn main() -> anyhow::Result<()> {
     // Cleanup tool gating is handled via tool guards (e.g. requiresEnvTrue=ODOO_ENABLE_CLEANUP_TOOLS).
     // We keep the CLI flag for compatibility, but it only affects the env var via clap env binding.
     let handler = Arc::new(McpOdooHandler::new(pool, registry));
+
+    // Start config server if requested
+    if let Some(port) = cli.config_server_port {
+        let config_dir =
+            get_config_dir().unwrap_or_else(|| std::path::PathBuf::from("~/.config/odoo-rust-mcp"));
+
+        tokio::spawn(async move {
+            if let Err(e) = start_config_server(port, config_dir).await {
+                error!("Config server error: {}", e);
+            }
+        });
+
+        info!("Config server will start on port {}", port);
+    }
 
     match cli.transport {
         TransportMode::Stdio => run_stdio(handler).await?,
