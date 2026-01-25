@@ -248,12 +248,12 @@ jobs:
           path: rust-mcp/target/${{ matrix.target }}/debian/*.deb
 
   # =============================================================================
-  # Stage 3: Create GitHub Release (depends on build only, deb is optional)
+  # Stage 3: Create GitHub Release (waits for all builds, runs if build succeeds)
   # =============================================================================
   release:
     name: Create GitHub Release
-    needs: [build]
-    # Run even if build-docker or build-deb fail
+    needs: [build, build-docker, build-deb]
+    # Run even if build-docker or build-deb fail, as long as build succeeds
     if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
@@ -266,6 +266,15 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: artifacts
+        continue-on-error: true
+
+      - name: Download build artifacts (fallback)
+        uses: actions/download-artifact@v7
+        with:
+          pattern: rust-mcp-*
+          path: artifacts
+          merge-multiple: true
+        continue-on-error: true
 
       - name: Get tag name
         id: tag
