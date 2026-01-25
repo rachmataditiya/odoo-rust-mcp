@@ -96,7 +96,7 @@ jobs:
 
       - name: Start config server (background)
         run: |
-          ODOO_CONFIG_SERVER_PORT=3000 \
+          ODOO_CONFIG_SERVER_PORT=3008 \
           ODOO_CONFIG_DIR=/tmp/test-config \
           RUST_LOG=info \
           timeout 60 ./rust-mcp/target/release/rust-mcp \
@@ -110,7 +110,7 @@ jobs:
           max_attempts=10
           attempt=0
           while [ $attempt -lt $max_attempts ]; do
-            if curl -s http://127.0.0.1:3000/health > /dev/null 2>&1; then
+            if curl -s http://127.0.0.1:3008/health > /dev/null 2>&1; then
               echo "Server is ready"
               break
             fi
@@ -121,15 +121,15 @@ jobs:
           
           # Test GET endpoints
           echo "Testing GET /api/config/instances..."
-          curl -s http://127.0.0.1:3000/api/config/instances | jq .
+          curl -s http://127.0.0.1:3008/api/config/instances | jq .
           
           echo "Testing GET /api/config/server..."
-          curl -s http://127.0.0.1:3000/api/config/server | jq .
+          curl -s http://127.0.0.1:3008/api/config/server | jq .
 
       - name: Test HTML UI is served
         run: |
           echo "Testing GET / (UI)..."
-          response=$(curl -s http://127.0.0.1:3000/)
+          response=$(curl -s http://127.0.0.1:3008/)
           if echo "$response" | grep -q "Config Manager"; then
             echo "✓ UI is being served correctly"
           else
@@ -159,7 +159,7 @@ jobs:
           helm template odoo-mcp helm/odoo-rust-mcp/ \
             --values helm/odoo-rust-mcp/values.yaml \
             --set configServer.enabled=true \
-            --set configServer.port=3000 \
+            --set configServer.port=3008 \
             > /tmp/helm-output.yaml
 
       - name: Validate generated manifests

@@ -93,8 +93,8 @@ service:
       targetPort: 8787
       protocol: TCP
     - name: config-ui
-      port: 3000
-      targetPort: 3000
+      port: 3008
+      targetPort: 3008
       protocol: TCP
   annotations: {}
 

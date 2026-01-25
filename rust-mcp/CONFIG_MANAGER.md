@@ -20,7 +20,7 @@ A modern web-based configuration management system for Odoo Rust MCP Server with
 cargo run --manifest-path rust-mcp/Cargo.toml -- \
   --transport ws \
   --listen 127.0.0.1:8787 \
-  --config-server-port 3000
+  --config-server-port 3008
 ```
 
 ### Option 2: Docker Container
@@ -28,10 +28,10 @@ cargo run --manifest-path rust-mcp/Cargo.toml -- \
 ```bash
 docker run -d \
   --name odoo-mcp-config \
-  -p 3000:3000 \
+  -p 3008:3008 \
   -v ~/.config/odoo-rust-mcp:/config \
   ghcr.io/rachmataditiya/odoo-rust-mcp:latest \
-  --config-server-port 3000
+  --config-server-port 3008
 ```
 
 ### Option 3: Kubernetes/Helm
@@ -44,7 +44,7 @@ helm install odoo-mcp helm/odoo-rust-mcp/ \
 
 ## 🌐 Web Interface
 
-Access the UI at: **http://localhost:3000**
+Access the UI at: **http://localhost:3008** (inspired by Peugeot 3008)
 
 ### Configuration Tabs
 
@@ -146,10 +146,10 @@ Content-Type: application/json
 
 ```bash
 # Load current config
-curl http://localhost:3000/api/config/instances | jq
+curl http://localhost:3008/api/config/instances | jq
 
 # Update instances
-curl -X POST http://localhost:3000/api/config/instances \
+curl -X POST http://localhost:3008/api/config/instances \
   -H "Content-Type: application/json" \
   -d @instances.json
 ```
@@ -211,7 +211,7 @@ chmod 600 ~/.config/odoo-rust-mcp/*.json
 
 - **Bind Address**: `127.0.0.1` (localhost only)
 - **No Authentication**: Edit in trusted environments only
-- **Port**: `3000` (configurable)
+- **Port**: `3008` (configurable, inspired by Peugeot 3008)
 
 ### Production Deployment
 
@@ -228,7 +228,7 @@ server {
     auth_basic_user_file /etc/nginx/.htpasswd;
     
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3008;
         proxy_set_header Host $host;
     }
 }
@@ -243,7 +243,7 @@ htpasswd -c /etc/nginx/.htpasswd admin
 
 ```bash
 # Enable config server (required)
-export ODOO_CONFIG_SERVER_PORT=3000
+export ODOO_CONFIG_SERVER_PORT=3008
 
 # Or set config directory
 export ODOO_CONFIG_DIR=~/.config/odoo-rust-mcp
@@ -270,11 +270,11 @@ cargo test --lib config_manager::manager
 ```bash
 # Start config server
 cargo run --manifest-path rust-mcp/Cargo.toml -- \
-  --config-server-port 3000 &
+  --config-server-port 3008 &
 
 # Test endpoints
-curl http://localhost:3000/health
-curl http://localhost:3000/api/config/instances
+curl http://localhost:3008/health
+curl http://localhost:3008/api/config/instances
 ```
 
 ## 🚀 Advanced Usage
@@ -343,10 +343,10 @@ Complete API docs with examples available at:
 ### Config server won't start
 ```bash
 # Check if port is in use
-lsof -i :3000
+lsof -i :3008
 
 # Use different port
---config-server-port 3001
+--config-server-port 3009
 
 # Check logs
 RUST_LOG=debug cargo run

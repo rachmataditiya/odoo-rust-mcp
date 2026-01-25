@@ -1,4 +1,4 @@
-## odoo-rust-mcp
+## odoo-rust-mcp 🚗
 
 [![CI](https://github.com/rachmataditiya/odoo-rust-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/rachmataditiya/odoo-rust-mcp/actions/workflows/ci.yml)
 [![Release](https://github.com/rachmataditiya/odoo-rust-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/rachmataditiya/odoo-rust-mcp/actions/workflows/release.yml)
@@ -11,6 +11,8 @@
 [![Kubernetes](https://img.shields.io/badge/kubernetes-ready-326CE5?logo=kubernetes&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/tree/main/k8s)
 [![Helm](https://img.shields.io/badge/helm-chart-0F1689?logo=helm&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/tree/main/helm)
 
+> **Inspired by Peugeot 3008** - Elegant, innovative, and reliable. Just like the Peugeot 3008 SUV combines style with performance, this MCP server combines elegance with powerful Odoo integration capabilities.
+
 Rust implementation of an **Odoo MCP server** (Model Context Protocol), supporting:
 - **Odoo 19+**: JSON-2 External API (`/json/2/...`) with API key authentication
 - **Odoo < 19**: JSON-RPC (`/jsonrpc`) with username/password authentication
@@ -21,7 +23,7 @@ Rust implementation of an **Odoo MCP server** (Model Context Protocol), supporti
 - MCP over **Streamable HTTP** (Cursor remote transport)
 - MCP over **SSE** (legacy HTTP+SSE transport)
 - MCP over **WebSocket** (standalone server; not used by Cursor)
-- **Web UI for configuration** on port 3000 (tools, prompts, server, instances JSON)
+- **Web UI for configuration** on port 3008 (tools, prompts, server, instances JSON) - Inspired by Peugeot 3008's elegant design
 - **Multi-instance** support via `ODOO_INSTANCES`
 - **Metadata caching** with configurable TTL to reduce Odoo API calls
 - **Health check endpoint** for monitoring and configuration validation
@@ -358,13 +360,13 @@ MCP clients that support resources can use these to discover available Odoo mode
 
 #### Configuration Server (Web UI)
 
-A web-based configuration interface is available on port **3000** for managing `tools.json`, `prompts.json`, `server.json`, and `instances.json` without manual file editing.
+A web-based configuration interface is available on port **3008** for managing `tools.json`, `prompts.json`, `server.json`, and `instances.json` without manual file editing. The port number is inspired by the Peugeot 3008 - a symbol of elegance, innovation, and reliability.
 
 **Access the config UI:**
 
-- Local: `http://localhost:3000`
-- Docker Compose: `http://localhost:3000` or via Traefik `http://mcp-config.localhost`
-- Kubernetes: Exposed via service on port 3000
+- Local: `http://localhost:3008`
+- Docker Compose: `http://localhost:3008` or via Traefik `http://mcp-config.localhost`
+- Kubernetes: Exposed via service on port 3008
 
 **Features:**
 
@@ -380,12 +382,12 @@ A web-based configuration interface is available on port **3000** for managing `
 **Environment variable:**
 
 ```bash
-export ODOO_CONFIG_SERVER_PORT=3000  # default: 3000
+export ODOO_CONFIG_SERVER_PORT=3008  # default: 3008 (inspired by Peugeot 3008)
 ```
 
 **Example: Enable/disable cleanup tools via UI**
 
-1. Open `http://localhost:3000`
+1. Open `http://localhost:3008`
 2. Go to **Tools** tab
 3. Find the `odoo_create_batch` tool (or other cleanup operations)
 4. Toggle the **ODOO_ENABLE_CLEANUP_TOOLS** checkbox

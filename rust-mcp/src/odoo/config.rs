@@ -73,25 +73,45 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
     let mut instances = HashMap::new();
 
     // Priority 1: ODOO_INSTANCES_JSON file path (for readable multi-line JSON)
-    if let Ok(path) = std::env::var("ODOO_INSTANCES_JSON")
-        && !path.trim().is_empty()
-    {
-        let content = std::fs::read_to_string(&path).map_err(|e| {
-            anyhow::anyhow!("Failed to read ODOO_INSTANCES_JSON file '{path}': {e}")
-        })?;
-        let parsed: HashMap<String, OdooInstanceConfig> =
-            serde_json::from_str(&content).map_err(|e| {
-                anyhow::anyhow!("Failed to parse ODOO_INSTANCES_JSON file '{path}': {e}")
+    if let Ok(path) = std::env::var("ODOO_INSTANCES_JSON") {
+        let path = path.trim();
+        if !path.is_empty() {
+            let content = std::fs::read_to_string(path).map_err(|e| {
+                anyhow::anyhow!("Failed to read ODOO_INSTANCES_JSON file '{path}': {e}")
             })?;
-        instances.extend(parsed);
+            let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&content)
+                .map_err(|e| {
+                    anyhow::anyhow!("Failed to parse ODOO_INSTANCES_JSON file '{path}': {e}")
+                })?;
+            instances.extend(parsed);
+        }
     }
-    // Priority 2: ODOO_INSTANCES inline JSON
-    else if let Ok(raw) = std::env::var("ODOO_INSTANCES")
+    // Priority 2: ODOO_INSTANCES inline JSON (only if ODOO_INSTANCES_JSON was not set or empty)
+    if instances.is_empty()
+        && let Ok(raw) = std::env::var("ODOO_INSTANCES")
         && !raw.trim().is_empty()
     {
-        let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&raw)
-            .map_err(|e| anyhow::anyhow!("Failed to parse ODOO_INSTANCES JSON: {e}"))?;
-        instances.extend(parsed);
+        let raw = raw.trim();
+        // Validate that it looks like JSON (starts with { or [)
+        if raw.starts_with('{') || raw.starts_with('[') {
+            let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(raw)
+                .map_err(|e| anyhow::anyhow!("Failed to parse ODOO_INSTANCES JSON: {e}"))?;
+            instances.extend(parsed);
+        } else {
+            // If ODOO_INSTANCES doesn't look like JSON, it might be a file path
+            // Try to read it as a file path
+            if let Ok(content) = std::fs::read_to_string(raw) {
+                let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&content)
+                    .map_err(|e| {
+                        anyhow::anyhow!("Failed to parse ODOO_INSTANCES file '{raw}': {e}")
+                    })?;
+                instances.extend(parsed);
+            } else {
+                anyhow::bail!(
+                    "ODOO_INSTANCES value '{raw}' is not valid JSON and is not a readable file path"
+                );
+            }
+        }
     }
 
     // Fallback to single-instance env vars.

@@ -57,7 +57,7 @@ spec:
               containerPort: 8787
               protocol: TCP
             - name: config-ui
-              containerPort: 3000
+              containerPort: 3008
               protocol: TCP
           
           # Environment variables
@@ -99,7 +99,7 @@ spec:
             # Config Manager (Web UI)
             # =========================================================================
             - name: ODOO_CONFIG_SERVER_PORT
-              value: "3000"
+              value: "3008"
             
             # =========================================================================
             # HTTP Authentication

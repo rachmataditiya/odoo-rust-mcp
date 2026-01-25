@@ -186,7 +186,7 @@ struct Cli {
     #[arg(long, env = "ODOO_ENABLE_CLEANUP_TOOLS", default_value_t = false)]
     enable_cleanup_tools: bool,
 
-    /// Enable config server on separate port (e.g., 3000)
+    /// Enable config server on separate port (e.g., 3008)
     #[arg(long, env = "ODOO_CONFIG_SERVER_PORT")]
     config_server_port: Option<u16>,
 
