@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Odoo Rust MCP - Config Manager</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.2/dist/jsoneditor.min.css">
     <style>
         * {
             margin: 0;
@@ -19,7 +20,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -81,8 +82,23 @@
             display: block;
         }
 
-        .editor-wrapper {
+        /* Two-column layout for editor and details */
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
             margin-bottom: 20px;
+        }
+
+        .editor-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .details-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
         label {
@@ -93,25 +109,11 @@
             font-size: 14px;
         }
 
-        textarea, input[type="text"] {
+        #jsoneditor {
             width: 100%;
-            padding: 12px;
+            height: 600px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
-            resize: vertical;
-            transition: border-color 0.3s;
-        }
-
-        textarea {
-            min-height: 400px;
-        }
-
-        textarea:focus, input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .button-group {
@@ -148,15 +150,6 @@
 
         .btn-secondary:hover {
             background: #e0e0e0;
-        }
-
-        .btn-success {
-            background: #10b981;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #059669;
         }
 
         .status {
@@ -226,23 +219,6 @@
             font-size: 12px;
         }
 
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         .info-box {
             background: #f0f9ff;
             border-left: 3px solid #3b82f6;
@@ -253,35 +229,145 @@
             color: #1e40af;
         }
 
-        .advanced-options {
-            margin-top: 20px;
+        .category-card {
             padding: 15px;
-            background: #f9fafb;
-            border-radius: 5px;
-            border: 1px dashed #ddd;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
         }
 
-        .advanced-options summary {
-            cursor: pointer;
-            font-weight: 500;
-            color: #667eea;
+        .category-card.enabled {
+            border-color: #ef4444;
         }
 
-        .advanced-options summary:hover {
-            color: #5568d3;
-        }
-
-        .advanced-options > div {
-            margin-top: 15px;
-        }
-
-        .action-buttons {
+        .category-card-header {
             display: flex;
-            gap: 10px;
-            justify-content: space-between;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            align-items: start;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .category-icon {
+            font-size: 20px;
+        }
+
+        .category-title {
+            flex: 1;
+        }
+
+        .category-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .category-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .category-badge.enabled {
+            background: #ef4444;
+        }
+
+        .category-badge.disabled {
+            background: #9ca3af;
+        }
+
+        .category-description {
+            font-size: 12px;
+            color: #666;
+            margin: 4px 0 8px 0;
+        }
+
+        .category-env-var {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .category-env-var code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .category-tools {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .category-tools strong {
+            color: #333;
+        }
+
+        .readonly-card {
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border: 2px solid #bfdbfe;
+        }
+
+        .readonly-header {
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+
+        .readonly-icon {
+            font-size: 20px;
+        }
+
+        .readonly-content {
+            flex: 1;
+        }
+
+        .readonly-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .readonly-description {
+            font-size: 12px;
+            color: #666;
+            margin: 4px 0 8px 0;
+        }
+
+        .readonly-tools {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .readonly-tools strong {
+            color: #333;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #ef4444;
+        }
+
+        .checkbox-wrapper label {
+            cursor: pointer;
+            margin: 0;
+            font-weight: normal;
         }
 
         footer {
@@ -289,6 +375,16 @@
             color: rgba(255, 255, 255, 0.8);
             margin-top: 30px;
             font-size: 13px;
+        }
+
+        @media (max-width: 1200px) {
+            .editor-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .details-panel {
+                order: -1;
+            }
         }
 
         @media (max-width: 768px) {
@@ -313,12 +409,11 @@
                 font-size: 13px;
             }
 
-            textarea {
-                min-height: 250px;
-                font-size: 12px;
+            #jsoneditor {
+                height: 400px;
             }
 
-            .action-buttons {
+            .button-group {
                 flex-direction: column;
             }
 
@@ -348,19 +443,23 @@
                 📌 Configure Odoo instances that this MCP server can connect to. Changes are applied immediately.
             </div>
 
-            <div class="editor-wrapper">
-                <label for="instances-editor">Instances Configuration (JSON)</label>
-                <textarea id="instances-editor" placeholder='{"default": {"url": "http://localhost:8069", "apiKey": "YOUR_KEY"}}'></textarea>
-                <div class="status" id="instances-status"></div>
-                <div class="button-group">
-                    <button class="btn-primary" onclick="saveInstances()">💾 Save Instances</button>
-                    <button class="btn-secondary" onclick="loadInstances()">🔄 Refresh</button>
+            <div class="editor-layout">
+                <div class="editor-panel">
+                    <label for="instances-editor">Instances Configuration (JSON)</label>
+                    <div id="instances-editor"></div>
+                    <div class="status" id="instances-status"></div>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="saveInstances()">💾 Save Instances</button>
+                        <button class="btn-secondary" onclick="loadInstances()">🔄 Refresh</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="instances-list" id="instances-list-container" style="display: none;">
-                <h3 style="margin-bottom: 10px; color: #333;">Active Instances</h3>
-                <div id="instances-list"></div>
+                <div class="details-panel">
+                    <div class="instances-list" id="instances-list-container" style="display: none;">
+                        <h3 style="margin-bottom: 10px; color: #333;">Active Instances</h3>
+                        <div id="instances-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -370,13 +469,24 @@
                 ⚙️ Configure server metadata and behavior settings. These affect how the MCP server is presented to clients.
             </div>
 
-            <div class="editor-wrapper">
-                <label for="server-editor">Server Configuration (JSON)</label>
-                <textarea id="server-editor" placeholder='{"serverName": "odoo-rust-mcp", "instructions": "..."}'></textarea>
-                <div class="status" id="server-status"></div>
-                <div class="button-group">
-                    <button class="btn-primary" onclick="saveServer()">💾 Save Server Config</button>
-                    <button class="btn-secondary" onclick="loadServer()">🔄 Refresh</button>
+            <div class="editor-layout">
+                <div class="editor-panel">
+                    <label for="server-editor">Server Configuration (JSON)</label>
+                    <div id="server-editor"></div>
+                    <div class="status" id="server-status"></div>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="saveServer()">💾 Save Server Config</button>
+                        <button class="btn-secondary" onclick="loadServer()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <div class="details-panel">
+                    <div class="info-box">
+                        <strong>Server Configuration Fields:</strong><br>
+                        • <code>serverName</code> - Name shown to MCP clients<br>
+                        • <code>instructions</code> - System instructions for the AI<br>
+                        • <code>protocolVersionDefault</code> - Default MCP protocol version
+                    </div>
                 </div>
             </div>
         </div>
@@ -387,26 +497,22 @@
                 🛠️ Define available tools that clients can call. Enable/disable tools by category for better security control.
             </div>
 
-            <!-- Tool Categories Toggle -->
-            <div style="margin-bottom: 20px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-                <h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">🔐 Tool Access Control</h3>
-                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">
-                    Control which tools are available by enabling/disabling categories. Changes are saved automatically.
-                </p>
-                
-                <div id="tool-categories" style="display: grid; gap: 15px;">
-                    <!-- Categories will be populated by JavaScript -->
+            <div class="editor-layout">
+                <div class="editor-panel">
+                    <label for="tools-editor">Tools Configuration (JSON Array)</label>
+                    <div id="tools-editor"></div>
+                    <div class="status" id="tools-status"></div>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="saveTools()">💾 Save Tools</button>
+                        <button class="btn-secondary" onclick="loadTools()">🔄 Refresh</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="editor-wrapper">
-                <label for="tools-editor">Tools Configuration (JSON Array)</label>
-                <textarea id="tools-editor" placeholder='[{"name": "tool_name", "description": "...", "inputSchema": {...}}]'></textarea>
-
-                <div class="status" id="tools-status"></div>
-                <div class="button-group">
-                    <button class="btn-primary" onclick="saveTools()">💾 Save Tools</button>
-                    <button class="btn-secondary" onclick="loadTools()">🔄 Refresh</button>
+                <div class="details-panel">
+                    <!-- Tool Categories Toggle -->
+                    <div id="tool-categories" style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Categories will be populated by JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -417,25 +523,58 @@
                 💬 Define system prompts that guide the MCP server's behavior and responses.
             </div>
 
-            <div class="editor-wrapper">
-                <label for="prompts-editor">Prompts Configuration (JSON Array)</label>
-                <textarea id="prompts-editor" placeholder='[{"name": "prompt_name", "description": "...", "arguments": [...]}]'></textarea>
-                <div class="status" id="prompts-status"></div>
-                <div class="button-group">
-                    <button class="btn-primary" onclick="savePrompts()">💾 Save Prompts</button>
-                    <button class="btn-secondary" onclick="loadPrompts()">🔄 Refresh</button>
+            <div class="editor-layout">
+                <div class="editor-panel">
+                    <label for="prompts-editor">Prompts Configuration (JSON Array)</label>
+                    <div id="prompts-editor"></div>
+                    <div class="status" id="prompts-status"></div>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="savePrompts()">💾 Save Prompts</button>
+                        <button class="btn-secondary" onclick="loadPrompts()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <div class="details-panel">
+                    <div class="info-box">
+                        <strong>Prompt Configuration:</strong><br>
+                        • <code>name</code> - Unique prompt identifier<br>
+                        • <code>description</code> - What this prompt does<br>
+                        • <code>content</code> - The actual prompt text
+                    </div>
                 </div>
             </div>
         </div>
 
         <footer>
             <p>🔄 Hot reload enabled • Changes apply immediately to the running server</p>
-            <p style="margin-top: 10px; opacity: 0.7;">Odoo Rust MCP Server • Config UI</p>
+            <p style="margin-top: 10px; opacity: 0.7;">Odoo Rust MCP Server • Config UI • Port 3008 (Inspired by Peugeot 3008)</p>
         </footer>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.2/dist/jsoneditor.min.js"></script>
     <script>
         const API_BASE = '/api/config';
+        let editors = {};
+
+        // Tool categories configuration
+        const TOOL_CATEGORIES = {
+            'ODOO_ENABLE_WRITE_TOOLS': {
+                name: 'Write Operations',
+                description: 'Create, update, delete, and modify records',
+                icon: '✏️',
+                color: '#ef4444',
+                bgColor: '#fef2f2',
+                tools: ['odoo_create', 'odoo_update', 'odoo_delete', 'odoo_execute', 'odoo_workflow_action', 'odoo_copy', 'odoo_create_batch']
+            },
+            'ODOO_ENABLE_CLEANUP_TOOLS': {
+                name: 'Destructive Cleanup',
+                description: 'Database cleanup and deep cleanup operations',
+                icon: '🗑️',
+                color: '#dc2626',
+                bgColor: '#fee2e2',
+                tools: ['odoo_database_cleanup', 'odoo_deep_cleanup']
+            }
+        };
 
         function switchTab(tabName) {
             // Hide all tabs
@@ -465,6 +604,30 @@
                     loadPrompts();
                     break;
             }
+        }
+
+        function initEditor(editorId, mode = 'tree') {
+            const container = document.getElementById(editorId);
+            if (!container) return null;
+
+            // Destroy existing editor if any
+            if (editors[editorId]) {
+                editors[editorId].destroy();
+            }
+
+            const options = {
+                mode: mode,
+                modes: ['code', 'tree', 'view', 'form', 'text'],
+                onError: function(err) {
+                    console.error('JSONEditor error:', err);
+                },
+                onModeChange: function(newMode) {
+                    console.log('Mode changed to:', newMode);
+                }
+            };
+
+            editors[editorId] = new JSONEditor(container, options);
+            return editors[editorId];
         }
 
         async function loadInstances() {
@@ -507,6 +670,7 @@
 
         async function saveInstances() {
             await saveConfig('instances', 'instances-editor', 'instances-status');
+            await displayInstances();
         }
 
         async function loadServer() {
@@ -517,139 +681,106 @@
             await saveConfig('server', 'server-editor', 'server-status');
         }
 
-        // Tool categories configuration
-        const TOOL_CATEGORIES = {
-            'ODOO_ENABLE_WRITE_TOOLS': {
-                name: 'Write Operations',
-                description: 'Create, update, delete, and modify records',
-                icon: '✏️',
-                color: '#ef4444',
-                bgColor: '#fef2f2',
-                tools: ['odoo_create', 'odoo_update', 'odoo_delete', 'odoo_execute', 'odoo_workflow_action', 'odoo_copy', 'odoo_create_batch']
-            },
-            'ODOO_ENABLE_CLEANUP_TOOLS': {
-                name: 'Destructive Cleanup',
-                description: 'Database cleanup and deep cleanup operations',
-                icon: '🗑️',
-                color: '#dc2626',
-                bgColor: '#fee2e2',
-                tools: ['odoo_database_cleanup', 'odoo_deep_cleanup']
-            }
-        };
-
         async function loadTools() {
             await fetchConfig('tools', 'tools-editor', 'tools-status');
             updateToolCategoriesUI();
         }
 
         function updateToolCategoriesUI() {
-            const editorText = document.getElementById('tools-editor').value;
+            const editor = editors['tools-editor'];
+            if (!editor) return;
+
+            const tools = editor.get();
             const container = document.getElementById('tool-categories');
             
-            try {
-                const tools = JSON.parse(editorText);
-                if (!Array.isArray(tools)) return;
+            if (!Array.isArray(tools)) return;
 
-                container.innerHTML = '';
+            container.innerHTML = '';
 
-                // Create category cards
-                Object.entries(TOOL_CATEGORIES).forEach(([envVar, category]) => {
-                    const categoryTools = tools.filter(tool => category.tools.includes(tool.name));
-                    const isEnabled = categoryTools.some(tool => 
-                        tool.guards && tool.guards.requiresEnvTrue === envVar
-                    );
+            // Create category cards
+            Object.entries(TOOL_CATEGORIES).forEach(([envVar, category]) => {
+                const categoryTools = tools.filter(tool => category.tools.includes(tool.name));
+                const isEnabled = categoryTools.some(tool => 
+                    tool.guards && tool.guards.requiresEnvTrue === envVar
+                );
 
-                    const card = document.createElement('div');
-                    card.style.cssText = `
-                        padding: 15px;
-                        background: ${category.bgColor};
-                        border-radius: 8px;
-                        border: 2px solid ${isEnabled ? category.color : '#e5e7eb'};
-                        transition: all 0.3s;
-                    `;
+                const card = document.createElement('div');
+                card.className = `category-card ${isEnabled ? 'enabled' : ''}`;
+                card.style.cssText = `
+                    background: ${category.bgColor};
+                    border-color: ${isEnabled ? category.color : '#e5e7eb'};
+                `;
 
-                    const checkboxId = `tool-flag-${envVar}`;
-                    card.innerHTML = `
-                        <div style="display: flex; align-items: start; gap: 12px;">
-                            <input type="checkbox" id="${checkboxId}" ${isEnabled ? 'checked' : ''} 
-                                   style="margin-top: 4px; width: 20px; height: 20px; cursor: pointer; accent-color: ${category.color};">
-                            <div style="flex: 1;">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                                    <span style="font-size: 20px;">${category.icon}</span>
-                                    <label for="${checkboxId}" style="font-weight: 600; color: #333; cursor: pointer; font-size: 15px;">
-                                        ${category.name}
-                                    </label>
-                                    <span style="padding: 2px 8px; background: ${isEnabled ? category.color : '#9ca3af'}; color: white; border-radius: 12px; font-size: 11px; font-weight: 500;">
-                                        ${isEnabled ? 'ENABLED' : 'DISABLED'}
-                                    </span>
-                                </div>
-                                <p style="font-size: 12px; color: #666; margin: 4px 0 8px 0;">
-                                    ${category.description}
-                                </p>
-                                <div style="font-size: 11px; color: #666; margin-top: 8px;">
-                                    <strong>Environment Variable:</strong> <code style="background: white; padding: 2px 6px; border-radius: 3px;">${envVar}</code>
-                                </div>
-                                <div style="margin-top: 8px; font-size: 11px; color: #666;">
-                                    <strong>Tools (${categoryTools.length}):</strong> 
-                                    <span style="color: #333;">${categoryTools.map(t => t.name).join(', ')}</span>
-                                </div>
+                const checkboxId = `tool-flag-${envVar}`;
+                card.innerHTML = `
+                    <div class="category-card-header">
+                        <span class="category-icon">${category.icon}</span>
+                        <div class="category-title">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <label for="${checkboxId}" style="cursor: pointer; margin: 0; font-weight: 600; color: #333; font-size: 15px;">
+                                    ${category.name}
+                                </label>
+                                <span class="category-badge ${isEnabled ? 'enabled' : 'disabled'}">
+                                    ${isEnabled ? 'ENABLED' : 'DISABLED'}
+                                </span>
                             </div>
+                            <div class="category-description">${category.description}</div>
                         </div>
-                    `;
+                        <input type="checkbox" id="${checkboxId}" ${isEnabled ? 'checked' : ''} 
+                               style="margin-top: 4px; width: 20px; height: 20px; cursor: pointer; accent-color: ${category.color};">
+                    </div>
+                    <div class="category-env-var">
+                        <strong>Environment Variable:</strong> <code>${envVar}</code>
+                    </div>
+                    <div class="category-tools">
+                        <strong>Tools (${categoryTools.length}):</strong> 
+                        <span style="color: #333;">${categoryTools.map(t => t.name).join(', ')}</span>
+                    </div>
+                `;
 
-                    // Add change listener
-                    const checkbox = card.querySelector(`#${checkboxId}`);
-                    checkbox.addEventListener('change', () => {
-                        updateToolsGuards(envVar, checkbox.checked);
-                    });
-
-                    container.appendChild(card);
+                // Add change listener
+                const checkbox = card.querySelector(`#${checkboxId}`);
+                checkbox.addEventListener('change', () => {
+                    updateToolsGuards(envVar, checkbox.checked);
                 });
 
-                // Add read-only tools info
-                const readOnlyTools = tools.filter(tool => {
-                    const hasGuard = tool.guards && tool.guards.requiresEnvTrue;
-                    return !hasGuard && !Object.values(TOOL_CATEGORIES).some(cat => cat.tools.includes(tool.name));
-                });
+                container.appendChild(card);
+            });
 
-                if (readOnlyTools.length > 0) {
-                    const readOnlyCard = document.createElement('div');
-                    readOnlyCard.style.cssText = `
-                        padding: 15px;
-                        background: #f0f9ff;
-                        border-radius: 8px;
-                        border: 2px solid #bfdbfe;
-                    `;
-                    readOnlyCard.innerHTML = `
-                        <div style="display: flex; align-items: start; gap: 12px;">
-                            <span style="font-size: 20px;">📖</span>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; color: #333; margin-bottom: 6px; font-size: 15px;">
-                                    Read-Only Tools (Always Enabled)
-                                </div>
-                                <p style="font-size: 12px; color: #666; margin: 4px 0 8px 0;">
-                                    These tools are safe and always available. They only read data, never modify.
-                                </p>
-                                <div style="font-size: 11px; color: #666;">
-                                    <strong>Tools (${readOnlyTools.length}):</strong> 
-                                    <span style="color: #333;">${readOnlyTools.map(t => t.name).join(', ')}</span>
-                                </div>
+            // Add read-only tools info
+            const readOnlyTools = tools.filter(tool => {
+                const hasGuard = tool.guards && tool.guards.requiresEnvTrue;
+                return !hasGuard && !Object.values(TOOL_CATEGORIES).some(cat => cat.tools.includes(tool.name));
+            });
+
+            if (readOnlyTools.length > 0) {
+                const readOnlyCard = document.createElement('div');
+                readOnlyCard.className = 'readonly-card';
+                readOnlyCard.innerHTML = `
+                    <div class="readonly-header">
+                        <span class="readonly-icon">📖</span>
+                        <div class="readonly-content">
+                            <div class="readonly-title">Read-Only Tools (Always Enabled)</div>
+                            <div class="readonly-description">
+                                These tools are safe and always available. They only read data, never modify.
+                            </div>
+                            <div class="readonly-tools">
+                                <strong>Tools (${readOnlyTools.length}):</strong> 
+                                <span style="color: #333;">${readOnlyTools.map(t => t.name).join(', ')}</span>
                             </div>
                         </div>
-                    `;
-                    container.appendChild(readOnlyCard);
-                }
-
-            } catch (e) {
-                console.error('Error parsing tools:', e);
+                    </div>
+                `;
+                container.appendChild(readOnlyCard);
             }
         }
 
         function updateToolsGuards(envVar, enabled) {
-            const editor = document.getElementById('tools-editor');
-            
+            const editor = editors['tools-editor'];
+            if (!editor) return;
+
             try {
-                const tools = JSON.parse(editor.value);
+                const tools = editor.get();
                 if (!Array.isArray(tools)) {
                     throw new Error('Tools must be an array');
                 }
@@ -675,7 +806,7 @@
                 });
 
                 // Update editor with modified tools
-                editor.value = JSON.stringify(tools, null, 2);
+                editor.set(tools);
                 
                 // Save to server automatically
                 saveConfig('tools', 'tools-editor', 'tools-status').then(() => {
@@ -703,7 +834,6 @@
         }
 
         async function fetchConfig(endpoint, editorId, statusId) {
-            const editor = document.getElementById(editorId);
             const status = document.getElementById(statusId);
 
             try {
@@ -713,9 +843,14 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
-                editor.value = JSON.stringify(data, null, 2);
+                
+                // Initialize or update editor
+                if (!editors[editorId]) {
+                    initEditor(editorId, 'tree');
+                }
+                editors[editorId].set(data);
+                
                 showStatus(status, '✅ Loaded successfully', 'success');
-
                 setTimeout(() => status.classList.remove('show'), 2000);
             } catch (error) {
                 showStatus(status, `❌ Error: ${error.message}`, 'error');
@@ -724,14 +859,24 @@
         }
 
         async function saveConfig(endpoint, editorId, statusId) {
-            const editor = document.getElementById(editorId);
+            const editor = editors[editorId];
             const status = document.getElementById(statusId);
 
-            try {
-                const text = editor.value.trim();
-                if (!text) throw new Error('Configuration is empty');
+            if (!editor) {
+                showStatus(status, '❌ Editor not initialized', 'error');
+                return;
+            }
 
-                const config = JSON.parse(text);
+            try {
+                let config;
+                try {
+                    config = editor.get();
+                } catch (e) {
+                    throw new Error('Invalid JSON: ' + e.message);
+                }
+
+                if (!config) throw new Error('Configuration is empty');
+
                 showStatus(status, '⏳ Saving...', 'loading');
 
                 const response = await fetch(`${API_BASE}/${endpoint}`, {
@@ -758,21 +903,15 @@
             element.className = `status show ${type}`;
         }
 
-        // Store original switchTab
-        const originalSwitchTab = switchTab;
-        
-        // Override switchTab to update tool categories
-        window.switchTab = function(tabName) {
-            originalSwitchTab(tabName);
-            if (tabName === 'tools') {
-                setTimeout(() => {
-                    updateToolCategoriesUI();
-                }, 100);
-            }
-        };
-
-        // Load instances on page load
+        // Initialize editors on page load
         window.addEventListener('load', () => {
+            // Initialize all editors
+            initEditor('instances-editor', 'tree');
+            initEditor('server-editor', 'tree');
+            initEditor('tools-editor', 'tree');
+            initEditor('prompts-editor', 'tree');
+            
+            // Load initial data
             loadInstances();
         });
     </script>
