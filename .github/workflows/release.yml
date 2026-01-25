@@ -94,27 +94,39 @@ jobs:
       - name: Prepare release assets (Unix)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p release
+          mkdir -p release/static
           cp rust-mcp/target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} release/
           cp -r config release/
-          cp -r rust-mcp/static/dist release/static/dist 2>/dev/null || echo "No static/dist folder"
+          # Copy React UI static files
+          if [ -d "rust-mcp/static/dist" ]; then
+            cp -r rust-mcp/static/dist release/static/
+            echo "✓ Static files copied to release/static/dist"
+            ls -la release/static/dist/
+          else
+            echo "⚠ No static/dist folder found"
+          fi
           cp README.md release/
           cp LICENSE release/ 2>/dev/null || echo "No LICENSE file"
           cp dotenv.example release/.env.example
           cp scripts/install.sh release/
           chmod +x release/install.sh
           cd release
+          echo "=== Release archive contents ==="
+          find . -type f | head -20
           tar -czvf ../${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }} .
 
       - name: Prepare release assets (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path release
+          New-Item -ItemType Directory -Force -Path release/static
           Copy-Item "rust-mcp/target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe" -Destination release/
           Copy-Item -Recurse config -Destination release/
           if (Test-Path "rust-mcp/static/dist") {
-            Copy-Item -Recurse "rust-mcp/static/dist" -Destination "release/static/dist"
+            Copy-Item -Recurse "rust-mcp/static/dist" -Destination "release/static/"
+            Write-Host "Static files copied to release/static/dist"
+          } else {
+            Write-Host "No static/dist folder found"
           }
           Copy-Item README.md -Destination release/
           Copy-Item LICENSE -Destination release/ -ErrorAction SilentlyContinue

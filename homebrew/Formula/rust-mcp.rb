@@ -29,6 +29,10 @@ class RustMcp < Formula
     (share/"odoo-rust-mcp").install Dir["config/*"] if Dir.exist?("config")
     # Install example env file
     (share/"odoo-rust-mcp").install ".env.example" if File.exist?(".env.example")
+    # Install static files (React UI) if present
+    if Dir.exist?("static/dist")
+      (share/"odoo-rust-mcp/static/dist").install Dir["static/dist/*"]
+    end
 
     # Create wrapper script that loads env file before running
     # Also creates config dir if it doesn't exist (fallback for post_install)
@@ -81,6 +85,9 @@ ENVEOF
       export MCP_TOOLS_JSON="${MCP_TOOLS_JSON:-#{HOMEBREW_PREFIX}/share/odoo-rust-mcp/tools.json}"
       export MCP_PROMPTS_JSON="${MCP_PROMPTS_JSON:-#{HOMEBREW_PREFIX}/share/odoo-rust-mcp/prompts.json}"
       export MCP_SERVER_JSON="${MCP_SERVER_JSON:-#{HOMEBREW_PREFIX}/share/odoo-rust-mcp/server.json}"
+      
+      # Change to share directory so static files can be found
+      cd "#{HOMEBREW_PREFIX}/share/odoo-rust-mcp"
       
       exec "#{opt_bin}/rust-mcp" "$@"
     EOS
