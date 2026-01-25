@@ -113,6 +113,7 @@ data:
         {
           "name": "odoo_create",
           "description": "Create a new Odoo record. Returns the ID of the created record.",
+          "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -137,6 +138,7 @@ data:
         {
           "name": "odoo_update",
           "description": "Update existing Odoo records. Returns true on success.",
+          "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -163,6 +165,7 @@ data:
         {
           "name": "odoo_delete",
           "description": "Delete Odoo records. Returns true on success. Use with caution!",
+          "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -211,6 +214,7 @@ data:
         {
           "name": "odoo_execute",
           "description": "Execute arbitrary method on Odoo model. For advanced operations and custom methods.",
+          "guards": { "requiresEnvTrue": "ODOO_ENABLE_WRITE_TOOLS" },
           "inputSchema": {
             "type": "object",
             "properties": {
