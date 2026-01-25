@@ -23,15 +23,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-# Build React UI first
-WORKDIR /app/config-ui
-COPY config-ui/package.json config-ui/package-lock.json* ./
-RUN npm ci || npm install
-
-COPY config-ui ./
-RUN npm run build
-
-# Build Rust binary
+# Prepare Rust build files first
 WORKDIR /app/rust-mcp
 COPY rust-mcp/Cargo.toml rust-mcp/Cargo.lock ./
 COPY rust-mcp/src ./src
@@ -39,21 +31,27 @@ COPY rust-mcp/tests ./tests
 COPY rust-mcp/config-defaults ./config-defaults
 # Copy openapi directory (required for include_str! in code)
 COPY rust-mcp/openapi ./openapi
-# Create static directory and copy if exists (dist/ will be added by UI build)
+# Create static directory structure
 RUN mkdir -p ./static
-COPY rust-mcp/static/ ./static/
 
-# Copy built UI to static/dist (Vite outputs to rust-mcp/static/dist from config-ui)
-# The UI is already built in previous step and should be at rust-mcp/static/dist
-RUN mkdir -p static/dist && \
-    if [ -d ../rust-mcp/static/dist ] && [ "$(ls -A ../rust-mcp/static/dist 2>/dev/null)" ]; then \
-        cp -r ../rust-mcp/static/dist/* static/dist/; \
-        echo "✓ Copied UI from build output"; \
-    elif [ -d static/dist ] && [ "$(ls -A static/dist 2>/dev/null)" ]; then \
-        echo "✓ UI already in static/dist"; \
+# Build React UI
+WORKDIR /app/config-ui
+COPY config-ui/package.json config-ui/package-lock.json* ./
+RUN npm ci || npm install
+
+COPY config-ui ./
+RUN npm run build
+
+# Copy React UI build output to Rust static directory
+RUN if [ -d /app/rust-mcp/static/dist ] && [ "$(ls -A /app/rust-mcp/static/dist 2>/dev/null)" ]; then \
+        echo "✓ UI build output found at /app/rust-mcp/static/dist"; \
     else \
-        echo "⚠ Warning: UI build output not found, server will use fallback"; \
+        echo "⚠ Warning: UI build output not found at expected location"; \
     fi
+
+# Back to Rust directory for final build
+WORKDIR /app/rust-mcp
+COPY rust-mcp/static/ ./static/
 
 # Build release binary
 RUN cargo build --release
