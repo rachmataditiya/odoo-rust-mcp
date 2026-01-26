@@ -19,22 +19,29 @@ fi
 
 echo "Bumping version from $OLD_VERSION to $NEW_VERSION"
 
-# Update Cargo.toml
-sed -i '' "s/^version = \"$OLD_VERSION\"/version = \"$NEW_VERSION\"/" rust-mcp/Cargo.toml
-echo "✓ Updated rust-mcp/Cargo.toml"
+# Determine sed command based on OS (Linux vs BSD/macOS)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    sed -i '' "s/^version = \"$OLD_VERSION\"/version = \"$NEW_VERSION\"/" rust-mcp/Cargo.toml
+    sed -i '' "s/\"version\": \"$OLD_VERSION\"/\"version\": \"$NEW_VERSION\"/" config-ui/package.json
+else
+    # Linux
+    sed -i "s/^version = \"$OLD_VERSION\"/version = \"$NEW_VERSION\"/" rust-mcp/Cargo.toml
+    sed -i "s/\"version\": \"$OLD_VERSION\"/\"version\": \"$NEW_VERSION\"/" config-ui/package.json
+fi
 
-# Update package.json
-sed -i '' "s/\"version\": \"$OLD_VERSION\"/\"version\": \"$NEW_VERSION\"/" config-ui/package.json
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to update version files"
+    exit 1
+fi
+
+echo "✓ Updated rust-mcp/Cargo.toml"
 echo "✓ Updated config-ui/package.json"
 
 # Show changes
 echo ""
-echo "Changes:"
+echo "Version changes:"
 git diff rust-mcp/Cargo.toml config-ui/package.json
 
 echo ""
-echo "Next steps:"
-echo "  1. Review the changes above"
-echo "  2. Commit: git add -A && git commit -m \"chore: bump version to $NEW_VERSION\""
-echo "  3. Push: git push"
-echo "  4. Create tag: git tag v$NEW_VERSION && git push origin v$NEW_VERSION"
+echo "✓ Version bump completed successfully!"
