@@ -96,16 +96,16 @@ export const InstancesTab: React.FC = () => {
             {Object.entries(instances).map(([name, instanceConfig]) => (
               <div
                 key={name}
-                className="bg-slate-700 p-4 rounded-lg border border-slate-600 hover:border-blue-500 transition-colors"
+                className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 p-4 rounded-lg border border-slate-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-900/20 transition-all duration-200"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-slate-100 mb-1">{name}</h4>
-                    <p className="text-slate-400 font-mono text-sm break-all">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-slate-100 mb-1">{name}</h4>
+                    <p className="text-slate-400 font-mono text-xs break-all line-clamp-2 hover:line-clamp-none transition-all">
                       {instanceConfig.url || 'No URL configured'}
                     </p>
                   </div>
-                  <span className="text-lg ml-2">🏢</span>
+                  <span className="text-xl ml-3 flex-shrink-0">🏢</span>
                 </div>
               </div>
             ))}

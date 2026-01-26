@@ -159,48 +159,42 @@ export const ToolsTab: React.FC = () => {
 
           return (
             <Card key={envVar}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <span className="text-2xl">{category.icon}</span>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-slate-100">{category.name}</h4>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4 flex-1">
+                  <span className="text-3xl flex-shrink-0">{category.icon}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="font-bold text-slate-100">{category.name}</h4>
                       <span
-                        className={`px-2 py-1 rounded text-xs font-medium text-white ${
-                          isEnabled ? 'bg-red-600' : 'bg-slate-600'
+                        className={`px-3 py-1 rounded-full text-xs font-bold text-white transition-all ${
+                          isEnabled ? 'bg-green-600 shadow-lg shadow-green-600/30' : 'bg-slate-600'
                         }`}
                       >
-                        {isEnabled ? '✓ ENABLED' : '✗ DISABLED'}
+                        {isEnabled ? '● ENABLED' : '○ DISABLED'}
                       </span>
                     </div>
-                    <p className="text-slate-400 text-sm mb-2">{category.description}</p>
+                    <p className="text-slate-400 text-sm mb-3">{category.description}</p>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {categoryTools.map((t) => (
+                        <span key={t.name} className="bg-slate-700/50 text-slate-300 px-2 py-1 rounded text-xs font-mono border border-slate-600 hover:border-slate-500">
+                          {t.name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer ml-2">
-                  <input
-                    type="checkbox"
-                    checked={isEnabled}
-                    onChange={(e) => updateToolsGuards(envVar, e.target.checked)}
-                    className="w-5 h-5 rounded accent-blue-500"
-                  />
+                <label className="flex items-center gap-3 flex-shrink-0 mt-1 cursor-pointer">
+                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? 'bg-green-600' : 'bg-slate-600'}`}>
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={(e) => updateToolsGuards(envVar, e.target.checked)}
+                      className="sr-only"
+                    />
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
                 </label>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div className="bg-slate-700 px-3 py-2 rounded">
-                  <p className="text-slate-400">Environment Variable:</p>
-                  <p className="font-mono text-blue-300 text-xs">{envVar}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-xs mb-1">Tools ({categoryTools.length}):</p>
-                  <div className="flex flex-wrap gap-2">
-                    {categoryTools.map((t) => (
-                      <span key={t.name} className="bg-slate-700 text-slate-200 px-2 py-1 rounded text-xs">
-                        {t.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
               </div>
             </Card>
           );
