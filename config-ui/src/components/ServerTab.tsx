@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { JsonEditor } from './JsonEditor';
 import { StatusMessage } from './StatusMessage';
+import { Card } from './Card';
+import { Button } from './Button';
 import { useConfig } from '../hooks/useConfig';
 import type { ServerConfig } from '../types';
 
@@ -34,48 +36,66 @@ export const ServerTab: React.FC = () => {
   };
 
   return (
-    <div>
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded mb-5 text-blue-800 text-sm">
-        ⚙️ Configure server metadata and behavior settings. These affect how the MCP server is presented to clients.
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 mb-5">
-        <div className="flex flex-col min-w-0">
-          <label className="block mb-2 font-medium text-gray-700 text-sm">
-            Server Configuration (JSON)
-          </label>
-          <JsonEditor value={config} onChange={setConfig} />
+    <div className="space-y-6">
+      <Card 
+        title="Server Configuration"
+        description="Configure server metadata and behavior settings. These affect how the MCP server is presented to clients."
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block mb-3 font-medium text-slate-200 text-sm">
+              Configuration (JSON)
+            </label>
+            <JsonEditor value={config} onChange={setConfig} />
+          </div>
+          
           <StatusMessage status={status} />
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <button
+          
+          <div className="flex gap-3 flex-wrap pt-4">
+            <Button
               onClick={handleSave}
               disabled={loading}
-              className="px-5 py-2 bg-primary text-white rounded cursor-pointer font-medium transition-all hover:bg-primary-dark hover:shadow-lg disabled:opacity-50"
+              icon="💾"
             >
-              💾 Save Server Config
-            </button>
-            <button
+              Save Configuration
+            </Button>
+            <Button
               onClick={handleRefresh}
               disabled={loading}
-              className="px-5 py-2 bg-gray-100 text-gray-700 rounded cursor-pointer font-medium transition-all hover:bg-gray-200 disabled:opacity-50"
+              variant="secondary"
+              icon="🔄"
             >
-              🔄 Refresh
-            </button>
+              Refresh
+            </Button>
           </div>
         </div>
+      </Card>
 
-        <div className="flex flex-col gap-4 sticky top-5 max-h-[calc(100vh-200px)] overflow-y-auto">
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded text-blue-800 text-sm">
-            <strong>Server Configuration Fields:</strong>
-            <br />
-            • <code className="bg-white px-1.5 py-0.5 rounded text-xs">serverName</code> - Name shown to MCP clients
-            <br />
-            • <code className="bg-white px-1.5 py-0.5 rounded text-xs">instructions</code> - System instructions for the AI
-            <br />
-            • <code className="bg-white px-1.5 py-0.5 rounded text-xs">protocolVersionDefault</code> - Default MCP protocol version
+      <Card 
+        title="Configuration Reference"
+        description="Common server configuration fields"
+      >
+        <div className="space-y-3 text-sm">
+          <div className="space-y-1">
+            <p className="text-slate-300">
+              <span className="bg-slate-700 px-2 py-1 rounded text-blue-300 font-mono text-xs">serverName</span>
+            </p>
+            <p className="text-slate-400">Name shown to MCP clients</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-300">
+              <span className="bg-slate-700 px-2 py-1 rounded text-blue-300 font-mono text-xs">instructions</span>
+            </p>
+            <p className="text-slate-400">System instructions for the AI</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-300">
+              <span className="bg-slate-700 px-2 py-1 rounded text-blue-300 font-mono text-xs">protocolVersionDefault</span>
+            </p>
+            <p className="text-slate-400">Default MCP protocol version</p>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

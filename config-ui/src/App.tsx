@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tabs } from './components/Tabs';
+import { SideNav } from './components/SideNav';
 import { InstancesTab } from './components/InstancesTab';
 import { ServerTab } from './components/ServerTab';
 import { ToolsTab } from './components/ToolsTab';
@@ -7,6 +7,13 @@ import { PromptsTab } from './components/PromptsTab';
 
 function App() {
   const [activeTab, setActiveTab] = useState('instances');
+
+  const navItems = [
+    { id: 'instances', label: 'Instances', icon: '🏢' },
+    { id: 'server', label: 'Server', icon: '⚙️' },
+    { id: 'tools', label: 'Tools', icon: '🛠️' },
+    { id: 'prompts', label: 'Prompts', icon: '💬' },
+  ];
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -23,31 +30,31 @@ function App() {
     }
   };
 
+  const getPageTitle = () => {
+    const item = navItems.find(i => i.id === activeTab);
+    return item ? `${item.icon} ${item.label}` : 'Config Manager';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary to-secondary p-5">
-      <div className="max-w-[1600px] mx-auto">
-        <header className="bg-white/95 p-8 rounded-lg mb-8 shadow-lg">
-          <h1 className="text-primary text-3xl mb-2 font-bold">
-            🚀 Odoo Rust MCP Config Manager
-          </h1>
-          <p className="text-gray-600 text-sm">
-            Edit and manage your Odoo MCP server configuration in real-time
-          </p>
+    <div className="flex min-h-screen bg-slate-950">
+      <SideNav items={navItems} activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      <main className="flex-1 flex flex-col">
+        <header className="bg-slate-900 border-b border-slate-700 px-8 py-6">
+          <h2 className="text-2xl font-bold text-slate-100">{getPageTitle()}</h2>
+          <p className="text-slate-400 text-sm mt-1">Manage your Odoo MCP server configuration</p>
         </header>
 
-        <Tabs activeTab={activeTab} onTabChange={setActiveTab}>
-          <div className="bg-white p-8 rounded-lg shadow-lg">
+        <div className="flex-1 p-8 overflow-auto">
+          <div className="max-w-6xl">
             {renderTabContent()}
           </div>
-        </Tabs>
+        </div>
 
-        <footer className="text-center text-white/80 mt-8 text-sm">
-          <p>🔄 Hot reload enabled • Changes apply immediately to the running server</p>
-          <p className="mt-2 opacity-70">
-            Odoo Rust MCP Server • Config UI • Port 3008 (Inspired by Peugeot 3008)
-          </p>
+        <footer className="bg-slate-900 border-t border-slate-700 px-8 py-4 text-center text-slate-500 text-xs">
+          <p>🔄 Hot reload enabled • Changes apply immediately</p>
         </footer>
-      </div>
+      </main>
     </div>
   );
 }

@@ -63,7 +63,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
   return (
     <div 
       ref={containerRef} 
-      className="w-full border border-gray-300 rounded"
+      className="w-full border border-slate-700 rounded-lg overflow-hidden jsoneditor-dark"
       style={{ height: '600px' }}
     />
   );
