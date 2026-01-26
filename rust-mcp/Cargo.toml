@@ -1,6 +1,6 @@
 [package]
 name = "rust-mcp"
-version = "0.3.21"
+version = "0.3.22"
 edition = "2024"
 description = "Model Context Protocol server for Odoo integration"
 license = "AGPL-3.0-only"
