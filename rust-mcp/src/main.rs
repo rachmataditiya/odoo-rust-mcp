@@ -208,14 +208,30 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
+    // Parse CLI first to determine transport mode
+    let cli = Cli::parse();
+
+    // Initialize tracing - for stdio mode, we must use stderr only
+    // because stdout is reserved for JSON-RPC messages
+    match cli.transport {
+        TransportMode::Stdio => {
+            // Stdio mode: log to stderr only, no ANSI colors to avoid issues
+            tracing_subscriber::fmt()
+                .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+                .with_writer(std::io::stderr)
+                .with_ansi(false)
+                .init();
+        }
+        _ => {
+            // HTTP/WS modes: normal logging to stdout with colors
+            tracing_subscriber::fmt()
+                .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+                .init();
+        }
+    }
 
     // Auto-load user config from ~/.config/odoo-rust-mcp/
     setup_user_config();
-
-    let cli = Cli::parse();
 
     // Handle subcommands first
     if let Some(command) = cli.command {
