@@ -7,7 +7,7 @@ import { PromptsTab } from './components/tabs/PromptsTab';
 import type { TabType } from './types';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('instances');
+  const [activeTab, setActiveTab] = useState<TabType>('server');
 
   const renderTab = () => {
     switch (activeTab) {
@@ -20,7 +20,7 @@ function App() {
       case 'prompts':
         return <PromptsTab />;
       default:
-        return <InstancesTab />;
+        return <ServerTab />;
     }
   };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Database, Server, Wrench, FileText, Circle } from 'lucide-react';
 import type { TabType } from '../types';
+import packageJson from '../../package.json';
 
 interface SideNavProps {
   activeTab: TabType;
@@ -10,8 +11,8 @@ interface SideNavProps {
 
 export function SideNav({ activeTab, onTabChange, isLive = true }: SideNavProps) {
   const navItems = [
-    { id: 'instances' as TabType, label: 'Instances', icon: Database },
     { id: 'server' as TabType, label: 'Server', icon: Server },
+    { id: 'instances' as TabType, label: 'Instances', icon: Database },
     { id: 'tools' as TabType, label: 'Tools', icon: Wrench },
     { id: 'prompts' as TabType, label: 'Prompts', icon: FileText },
   ];
@@ -20,7 +21,7 @@ export function SideNav({ activeTab, onTabChange, isLive = true }: SideNavProps)
     <div className="w-64 h-screen bg-gray-900 text-white flex flex-col">
       <div className="p-6 border-b border-gray-800">
         <h1 className="text-xl font-bold">MCP Configuration</h1>
-        <p className="text-sm text-gray-400 mt-1">Manager v0.3.15</p>
+        <p className="text-sm text-gray-400 mt-1">Manager v{packageJson.version}</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
