@@ -14,9 +14,9 @@ interface SideNavProps {
 
 export const SideNav: React.FC<SideNavProps> = ({ items, activeTab, onTabChange }) => {
   return (
-    <nav className="w-64 bg-slate-900 border-r border-slate-700 p-6 min-h-screen flex flex-col">
+    <nav className="w-64 bg-slate-900 border-r border-slate-700 p-6 min-h-screen flex flex-col sticky top-0">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-blue-400">🚀 MCP Config</h1>
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">🚀 MCP Config</h1>
         <p className="text-xs text-slate-400 mt-1">Odoo Rust Manager</p>
       </div>
 
@@ -25,22 +25,23 @@ export const SideNav: React.FC<SideNavProps> = ({ items, activeTab, onTabChange 
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-all font-medium flex items-center gap-3 ${
+            className={`w-full text-left px-4 py-3 rounded-lg transition-all font-medium flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               activeTab === item.id
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
             }`}
           >
             <span className="text-lg">{item.icon}</span>
-            {item.label}
+            <span>{item.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="pt-4 border-t border-slate-700">
-        <p className="text-xs text-slate-500 text-center">
-          🔄 Hot Reload Enabled
+      <div className="pt-4 border-t border-slate-700 text-center">
+        <p className="text-xs text-slate-500">
+          🔄 Hot Reload
         </p>
+        <p className="text-xs text-slate-600 mt-1">v0.3.15</p>
       </div>
     </nav>
   );

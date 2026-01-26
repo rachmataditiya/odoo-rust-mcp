@@ -16,13 +16,13 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseClasses = 'font-medium rounded-lg transition-all inline-flex items-center gap-2 cursor-pointer border';
+  const baseClasses = 'font-medium rounded-lg transition-all inline-flex items-center gap-2 cursor-pointer border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950';
   
   const variantClasses = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600 disabled:bg-blue-600 disabled:opacity-50',
-    secondary: 'bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600 disabled:opacity-50',
-    ghost: 'bg-transparent hover:bg-slate-700 text-slate-300 border-slate-700 disabled:opacity-50',
-    danger: 'bg-red-600 hover:bg-red-700 text-white border-red-600 disabled:opacity-50',
+    primary: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:shadow-lg hover:shadow-blue-600/30 focus:ring-blue-500 disabled:bg-blue-600 disabled:opacity-50',
+    secondary: 'bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600 hover:shadow-lg hover:shadow-slate-700/30 focus:ring-slate-500 disabled:opacity-50',
+    ghost: 'bg-transparent hover:bg-slate-700 text-slate-300 border-slate-700 focus:ring-slate-500 disabled:opacity-50',
+    danger: 'bg-red-600 hover:bg-red-700 text-white border-red-600 hover:shadow-lg hover:shadow-red-600/30 focus:ring-red-500 disabled:opacity-50',
   };
 
   const sizeClasses = {
@@ -37,7 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
-      {icon && <span>{icon}</span>}
+      {icon && <span className="text-base">{icon}</span>}
       {children}
     </button>
   );
