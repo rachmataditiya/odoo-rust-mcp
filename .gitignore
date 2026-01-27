@@ -2,6 +2,7 @@ rust-mcp/target/
 rust-mcp/.env
 rust-mcp/.env.*
 rust-mcp/static/dist/
+rust-mcp/coverage/
 
 .env
 .env.*
@@ -13,6 +14,6 @@ instances.json
 node_modules/
 config-ui/node_modules/
 config-ui/dist/
+config-ui/coverage/
 
 .DS_Store
-
