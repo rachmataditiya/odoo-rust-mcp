@@ -318,12 +318,19 @@ sudo apt install rust-mcp</code></pre>
                     <h3>Configure</h3>
                     <p>Edit the configuration file with your Odoo credentials</p>
                     <pre><code>nano ~/.config/rust-mcp/env</code></pre>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <strong>New in v0.3.0+:</strong> Multi-instance configuration is now the default. 
+                        Edit <code>~/.config/rust-mcp/instances.json</code> for multiple Odoo instances.
+                    </p>
                 </li>
                 <li>
                     <h3>Start Service</h3>
                     <p>Enable and start the MCP server</p>
                     <pre><code>sudo systemctl enable rust-mcp
 sudo systemctl start rust-mcp</code></pre>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                        Access Config UI at <code>http://localhost:3008</code> (default: admin/changeme)
+                    </p>
                 </li>
             </ol>
         </div>
@@ -347,9 +354,19 @@ sudo systemctl start rust-mcp</code></pre>
                     <p>API Key & Username/Password</p>
                 </div>
                 <div class="feature">
+                    <div class="icon">🌐</div>
+                    <h4>Web Config UI</h4>
+                    <p>Manage configs via browser</p>
+                </div>
+                <div class="feature">
                     <div class="icon">📊</div>
                     <h4>Full API Access</h4>
                     <p>CRUD, Reports, Workflows</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">⚡</div>
+                    <h4>Hot Reload</h4>
+                    <p>No restart needed</p>
                 </div>
             </div>
         </div>
