@@ -117,8 +117,11 @@ const DEFAULT_INSTANCES_TEMPLATE: &str = r#"{
 }
 "#;
 
-/// Default env file template (multi-instance by default)
-const DEFAULT_ENV_TEMPLATE: &str = r#"# Odoo Rust MCP Server Configuration
+/// Generate default env file template with actual config directory path
+fn generate_default_env_template(config_dir: &std::path::Path) -> String {
+    let config_path = config_dir.to_string_lossy();
+    format!(
+        r#"# Odoo Rust MCP Server Configuration
 # Multi-instance configuration (default)
 
 # =============================================================================
@@ -156,7 +159,18 @@ CONFIG_UI_PASSWORD=changeme
 # When enabled, clients must include "Authorization: Bearer <token>" header
 MCP_AUTH_ENABLED=false
 # MCP_AUTH_TOKEN=your-secure-random-token-here
-"#;
+
+# =============================================================================
+# MCP Config Paths
+# =============================================================================
+# Path to MCP configuration files (tools, prompts, server settings)
+# These are automatically set to your user config directory
+MCP_TOOLS_JSON={config_path}/tools.json
+MCP_PROMPTS_JSON={config_path}/prompts.json
+MCP_SERVER_JSON={config_path}/server.json
+"#
+    )
+}
 
 /// Setup user config directory and load environment variables
 fn setup_user_config() {
@@ -177,7 +191,8 @@ fn setup_user_config() {
     // Create default env file if it doesn't exist
     let env_file = config_dir.join("env");
     if !env_file.exists() {
-        if let Err(e) = fs::write(&env_file, DEFAULT_ENV_TEMPLATE) {
+        let template = generate_default_env_template(&config_dir);
+        if let Err(e) = fs::write(&env_file, template) {
             warn!("Failed to create default env file {:?}: {}", env_file, e);
         } else {
             // Set restrictive permissions on env file (Unix only)
@@ -311,7 +326,7 @@ fn migrate_env_file(path: &PathBuf) {
         return;
     };
 
-    let mut additions = Vec::new();
+    let mut additions: Vec<String> = Vec::new();
 
     // Check for single-instance to multi-instance migration (added in v0.3.23)
     // If user has ODOO_URL but not ODOO_INSTANCES_JSON, suggest migration
@@ -333,7 +348,8 @@ fn migrate_env_file(path: &PathBuf) {
 # 3. Comment out or remove the single-instance ODOO_URL/DB/etc settings above
 #
 # ODOO_INSTANCES_JSON=~/.config/odoo-rust-mcp/instances.json
-"#,
+"#
+            .to_string(),
         );
         info!("Migration: Adding multi-instance migration guide to env file");
     }
@@ -349,7 +365,8 @@ fn migrate_env_file(path: &PathBuf) {
 # IMPORTANT: Change these default credentials immediately!
 CONFIG_UI_USERNAME=admin
 CONFIG_UI_PASSWORD=changeme
-"#,
+"#
+            .to_string(),
         );
         info!("Migration: Adding CONFIG_UI_USERNAME/PASSWORD to env file");
     }
@@ -363,15 +380,40 @@ CONFIG_UI_PASSWORD=changeme
 # =============================================================================
 # Enable/disable HTTP transport authentication
 MCP_AUTH_ENABLED=false
-"#,
+"#
+            .to_string(),
         );
         info!("Migration: Adding MCP_AUTH_ENABLED to env file");
+    }
+
+    // Check for MCP config paths (added in v0.3.27)
+    // These allow using user config directory for tools/prompts/server configs
+    if !content.contains("MCP_TOOLS_JSON") {
+        // Get user config directory for the template
+        let config_dir = get_config_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| "~/.config/odoo-rust-mcp".to_string());
+
+        additions.push(format!(
+            r#"
+# =============================================================================
+# MCP Config Paths (added in v0.3.27)
+# =============================================================================
+# Path to MCP configuration files. By default, these use the user config
+# directory. For Homebrew/APT installs, these may also point to the share
+# directory. Set these to customize where config files are loaded from.
+MCP_TOOLS_JSON={config_dir}/tools.json
+MCP_PROMPTS_JSON={config_dir}/prompts.json
+MCP_SERVER_JSON={config_dir}/server.json
+"#
+        ));
+        info!("Migration: Adding MCP_*_JSON paths to env file");
     }
 
     if !additions.is_empty() {
         let mut new_content = content;
         for addition in additions {
-            new_content.push_str(addition);
+            new_content.push_str(&addition);
         }
 
         if let Err(e) = fs::write(path, new_content) {

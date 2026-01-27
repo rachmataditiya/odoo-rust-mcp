@@ -199,6 +199,22 @@ MCP_SERVER_JSON=${CONFIG_DIR}/server.json
 ENVEOF
         sudo chmod 600 "$ENV_FILE"
         warn "Please edit $ENV_FILE with your credentials"
+    else
+        # Migration: Add MCP config paths to existing env file if missing
+        if ! grep -q "MCP_TOOLS_JSON" "$ENV_FILE"; then
+            info "Migration: Adding MCP config paths to env file..."
+            sudo tee -a "$ENV_FILE" > /dev/null << MIGRATEEOF
+
+# =============================================================================
+# MCP Config Paths (added in v0.3.27)
+# =============================================================================
+# Path to MCP configuration files (tools, prompts, server settings)
+MCP_TOOLS_JSON=${CONFIG_DIR}/tools.json
+MCP_PROMPTS_JSON=${CONFIG_DIR}/prompts.json
+MCP_SERVER_JSON=${CONFIG_DIR}/server.json
+MIGRATEEOF
+            info "Migration complete"
+        fi
     fi
 
     # Create systemd service file
@@ -329,12 +345,28 @@ MCP_AUTH_ENABLED=false
 MCP_AUTH_TOKEN=CHANGE_ME_TO_A_SECURE_TOKEN
 
 # MCP Config paths
-MCP_TOOLS_JSON=$CONFIG_DIR/tools.json
-MCP_PROMPTS_JSON=$CONFIG_DIR/prompts.json
-MCP_SERVER_JSON=$CONFIG_DIR/server.json
+MCP_TOOLS_JSON=$user_config_dir/tools.json
+MCP_PROMPTS_JSON=$user_config_dir/prompts.json
+MCP_SERVER_JSON=$user_config_dir/server.json
 ENVEOF
         chmod 600 "$user_env_file"
         warn "Please edit $user_env_file with your credentials"
+    else
+        # Migration: Add MCP config paths to existing env file if missing
+        if ! grep -q "MCP_TOOLS_JSON" "$user_env_file"; then
+            info "Migration: Adding MCP config paths to env file..."
+            cat >> "$user_env_file" << MIGRATEEOF
+
+# =============================================================================
+# MCP Config Paths (added in v0.3.27)
+# =============================================================================
+# Path to MCP configuration files (tools, prompts, server settings)
+MCP_TOOLS_JSON=$user_config_dir/tools.json
+MCP_PROMPTS_JSON=$user_config_dir/prompts.json
+MCP_SERVER_JSON=$user_config_dir/server.json
+MIGRATEEOF
+            info "Migration complete"
+        fi
     fi
 
     # Create launchd plist

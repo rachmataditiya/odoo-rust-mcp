@@ -78,10 +78,43 @@ CONFIG_UI_PASSWORD=changeme
 MCP_AUTH_ENABLED=false
 # Generate a secure token: openssl rand -hex 32
 # MCP_AUTH_TOKEN=your-secure-random-token-here
+
+# =============================================================================
+# MCP Config Paths
+# =============================================================================
+# Path to MCP configuration files (tools, prompts, server settings)
+MCP_TOOLS_JSON=$CONFIG_DIR/tools.json
+MCP_PROMPTS_JSON=$CONFIG_DIR/prompts.json
+MCP_SERVER_JSON=$CONFIG_DIR/server.json
 ENVEOF
     chmod 600 "$CONFIG_DIR/env"
     echo "Created default env file: $CONFIG_DIR/env"
+else
+    # Migration: Add MCP config paths to existing env file if missing
+    if ! grep -q "MCP_TOOLS_JSON" "$CONFIG_DIR/env"; then
+        echo "Migration: Adding MCP config paths to env file..."
+        cat >> "$CONFIG_DIR/env" << MIGRATEEOF
+
+# =============================================================================
+# MCP Config Paths (added in v0.3.27)
+# =============================================================================
+# Path to MCP configuration files (tools, prompts, server settings)
+MCP_TOOLS_JSON=$CONFIG_DIR/tools.json
+MCP_PROMPTS_JSON=$CONFIG_DIR/prompts.json
+MCP_SERVER_JSON=$CONFIG_DIR/server.json
+MIGRATEEOF
+        echo "Migration complete"
+    fi
 fi
+
+# Copy default config files to user directory if they don't exist
+for config_file in tools.json prompts.json server.json; do
+    if [ ! -f "$CONFIG_DIR/$config_file" ] && [ -f "/usr/share/rust-mcp/$config_file" ]; then
+        cp "/usr/share/rust-mcp/$config_file" "$CONFIG_DIR/$config_file"
+        chmod 600 "$CONFIG_DIR/$config_file"
+        echo "Copied default $config_file to: $CONFIG_DIR/$config_file"
+    fi
+done
 
 # Load environment from user config if exists
 if [ -f "$CONFIG_DIR/env" ]; then
@@ -90,10 +123,10 @@ if [ -f "$CONFIG_DIR/env" ]; then
     set +a
 fi
 
-# Set default MCP config paths if not already set
-export MCP_TOOLS_JSON="${MCP_TOOLS_JSON:-/usr/share/rust-mcp/tools.json}"
-export MCP_PROMPTS_JSON="${MCP_PROMPTS_JSON:-/usr/share/rust-mcp/prompts.json}"
-export MCP_SERVER_JSON="${MCP_SERVER_JSON:-/usr/share/rust-mcp/server.json}"
+# Set default MCP config paths to user config dir (fallback to share dir)
+export MCP_TOOLS_JSON="${MCP_TOOLS_JSON:-$CONFIG_DIR/tools.json}"
+export MCP_PROMPTS_JSON="${MCP_PROMPTS_JSON:-$CONFIG_DIR/prompts.json}"
+export MCP_SERVER_JSON="${MCP_SERVER_JSON:-$CONFIG_DIR/server.json}"
 
 # Set default instances.json path if not already set
 export ODOO_INSTANCES_JSON="${ODOO_INSTANCES_JSON:-$CONFIG_DIR/instances.json}"
