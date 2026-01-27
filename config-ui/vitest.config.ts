@@ -9,14 +9,17 @@ export default defineConfig({
     globals: true,
     setupFiles: [],
     coverage: {
-      provider: 'v8',
+      provider: 'istanbul',
       reporter: ['text', 'json', 'html', 'lcov', 'cobertura'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/',
         'dist/',
-        '**/*.test.ts',
-        '**/*.test.tsx',
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/__tests__/**',
       ],
+      all: true,
     },
   },
   resolve: {
