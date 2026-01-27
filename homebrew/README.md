@@ -29,10 +29,24 @@ brew install rust-mcp
 
 ### Service Authentication
 
-To enable Bearer token authentication for the HTTP service, add to your `~/.config/odoo-rust-mcp/env`:
+**MCP HTTP Authentication:**
+
+To enable Bearer token authentication for the HTTP service, you can either:
+
+**Option 1: Via Config UI (Recommended)**
+1. Start the service: `brew services start rust-mcp`
+2. Open `http://localhost:3008` and login (default: `admin` / `changeme`)
+3. Go to **Security** tab
+4. Toggle **Enable MCP HTTP Authentication**
+5. Click **Generate New Token** (or paste existing token)
+6. Changes apply immediately (no restart needed)
+
+**Option 2: Via Environment Variables**
+Add to your `~/.config/odoo-rust-mcp/env`:
 
 ```bash
 # Generate token: openssl rand -hex 32
+MCP_AUTH_ENABLED=true
 MCP_AUTH_TOKEN=your-secure-random-token-here
 ```
 
@@ -40,6 +54,24 @@ Then restart the service:
 
 ```bash
 brew services restart rust-mcp
+```
+
+**Config UI Authentication:**
+
+The Config UI requires login credentials. Default credentials are:
+- Username: `admin`
+- Password: `changeme`
+
+**IMPORTANT:** Change the default password immediately after first login:
+1. Open `http://localhost:3008`
+2. Login with default credentials
+3. Go to **Security** tab
+4. Update username and/or password
+
+Credentials are stored in `~/.config/odoo-rust-mcp/env`:
+```bash
+CONFIG_UI_USERNAME=admin
+CONFIG_UI_PASSWORD=your-secure-password
 ```
 
 ### Cursor Configuration

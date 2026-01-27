@@ -5,11 +5,16 @@ A modern web-based configuration management system for Odoo Rust MCP Server with
 ## 🎯 Features
 
 ✅ **Web UI** - Beautiful, responsive configuration editor  
+✅ **Authentication** - Secure login with username/password (configurable via `.env`)  
 ✅ **Hot Reload** - Changes apply instantly without service restart  
 ✅ **REST API** - Full API for programmatic configuration  
 ✅ **File Watcher** - Automatic detection of external file changes  
 ✅ **Multi-Config** - Manage instances, tools, prompts, and server settings  
-✅ **Real-Time Validation** - JSON validation before saving  
+✅ **Real-Time Validation** - JSON validation before saving with automatic rollback  
+✅ **Error Handling** - Automatic backup and restore on configuration errors  
+✅ **MCP Auth Management** - Enable/disable HTTP authentication and generate tokens from UI  
+✅ **Config UI Credentials** - Change login username and password from the UI  
+✅ **User Notifications** - Success, error, and warning messages displayed in the UI  
 ✅ **Live Instance Display** - View active Odoo connections  
 
 ## 📋 Quick Start
@@ -131,6 +136,7 @@ GET /api/config/prompts
 # Update instances (triggers hot reload)
 POST /api/config/instances
 Content-Type: application/json
+Authorization: Bearer <session-token>
 
 {
   "default": {
@@ -139,7 +145,47 @@ Content-Type: application/json
   }
 }
 
-# Response: { "status": "saved" }
+# Response: { 
+#   "success": true, 
+#   "message": "Configuration saved successfully",
+#   "warning": null,
+#   "rollback_performed": false
+# }
+```
+
+### MCP HTTP Authentication Management
+```bash
+# Get MCP auth status
+GET /api/config/auth/status
+Authorization: Bearer <session-token>
+
+# Enable/disable MCP HTTP auth
+POST /api/config/auth/enable
+Content-Type: application/json
+Authorization: Bearer <session-token>
+
+{
+  "enabled": true
+}
+
+# Generate new MCP auth token
+POST /api/config/auth/token/generate
+Authorization: Bearer <session-token>
+
+# Response: { "token": "new-generated-token-here" }
+```
+
+### Config UI Credentials Management
+```bash
+# Update Config UI credentials
+POST /api/config/auth/credentials
+Content-Type: application/json
+Authorization: Bearer <session-token>
+
+{
+  "username": "newadmin",
+  "password": "newpassword"
+}
 ```
 
 ### Example cURL
@@ -180,12 +226,16 @@ curl -X POST http://localhost:3008/api/config/instances \
 
 ### What Reloads Automatically
 
-| File | Component | Reload Time |
-|------|-----------|------------|
+| File/Setting | Component | Reload Time |
+|--------------|-----------|------------|
 | `instances.json` | Connection Pool | < 100ms |
 | `tools.json` | Tool Registry | < 50ms |
 | `prompts.json` | Prompt Registry | < 50ms |
 | `server.json` | Server Info | < 50ms |
+| `MCP_AUTH_ENABLED` | HTTP Auth Config | < 50ms |
+| `MCP_AUTH_TOKEN` | HTTP Auth Config | < 50ms |
+
+**Note:** MCP HTTP authentication settings can be changed from the Config UI and take effect immediately without restarting the service.
 
 ## 📁 Configuration Files
 
@@ -207,10 +257,47 @@ chmod 600 ~/.config/odoo-rust-mcp/*.json
 
 ## 🛡️ Security
 
+### Authentication
+
+The Config UI requires login credentials that are stored in your `.env` file:
+
+```bash
+# Config UI Authentication (default credentials)
+CONFIG_UI_USERNAME=admin      # default: admin
+CONFIG_UI_PASSWORD=changeme   # default: changeme (CHANGE THIS!)
+```
+
+**First-time setup:**
+1. Login with default credentials (`admin` / `changeme`)
+2. Go to **Security** tab
+3. Change the default password immediately
+
+**Change credentials from UI:**
+1. Login to Config UI
+2. Go to **Security** tab
+3. Update username and/or password
+4. Changes are saved to `.env` file immediately
+
+### MCP HTTP Authentication Management
+
+You can enable/disable MCP HTTP authentication and generate tokens directly from the Config UI:
+
+1. Login to Config UI
+2. Go to **Security** tab
+3. Toggle **Enable MCP HTTP Authentication**
+4. Click **Generate New Token** (or paste existing token)
+5. Changes apply immediately (hot-reload, no restart needed)
+
+The settings are stored in `.env`:
+```bash
+MCP_AUTH_ENABLED=true
+MCP_AUTH_TOKEN=your-generated-token-here
+```
+
 ### Default Configuration
 
 - **Bind Address**: `127.0.0.1` (localhost only)
-- **No Authentication**: Edit in trusted environments only
+- **Authentication**: Required (username/password from `.env`)
 - **Port**: `3008` (configurable, inspired by Peugeot 3008)
 
 ### Production Deployment
@@ -365,6 +452,12 @@ jq empty ~/.config/odoo-rust-mcp/instances.json
 # Pretty print
 jq . ~/.config/odoo-rust-mcp/instances.json
 ```
+
+**Automatic Error Handling:**
+- The Config UI automatically creates backups before saving
+- If validation fails or file becomes corrupted, the previous version is automatically restored
+- You'll see a notification in the UI if a rollback occurred
+- Check the browser console for detailed error messages
 
 ### Web UI not loading
 - Check browser console for errors

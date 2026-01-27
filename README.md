@@ -182,6 +182,19 @@ export MCP_PROMPTS_JSON="config/prompts.json"
 export MCP_SERVER_JSON="config/server.json"
 ```
 
+**Automatic Configuration Path Setup:**
+
+For new installations (Homebrew, APT, direct binary), the following environment variables are automatically set in your `.env` file:
+
+```bash
+# MCP Config paths (using user config directory)
+MCP_TOOLS_JSON=/Users/username/.config/odoo-rust-mcp/tools.json
+MCP_PROMPTS_JSON=/Users/username/.config/odoo-rust-mcp/prompts.json
+MCP_SERVER_JSON=/Users/username/.config/odoo-rust-mcp/server.json
+```
+
+For existing users upgrading, these variables are automatically added to your `.env` file during the first run after upgrade. Default config files (`tools.json`, `prompts.json`, `server.json`) are also automatically copied to your config directory if they don't exist.
+
 Sample files are provided in:
 - `rust-mcp/config/tools.json`
 - `rust-mcp/config/prompts.json`
@@ -370,28 +383,84 @@ A web-based configuration interface is available on port **3008** for managing `
 
 **Features:**
 
-- Edit all JSON configuration files via interactive UI
-- Real-time JSON validation before saving
-- Tool enable/disable checkboxes (e.g., toggle `ODOO_ENABLE_CLEANUP_TOOLS`)
-- Automatic file watching and hot reload (no server restart needed)
-- REST API endpoints for programmatic access:
+- **Authentication**: Secure login with username/password (configurable via `.env`)
+- **Edit all JSON configuration files** via interactive UI
+- **Real-time JSON validation** before saving with automatic rollback on errors
+- **Error handling**: Automatic backup and restore if configuration becomes corrupted
+- **MCP HTTP Auth Management**: Enable/disable authentication and generate tokens directly from UI
+- **Config UI Credentials Management**: Change login username and password from the UI
+- **Tool enable/disable checkboxes** (e.g., toggle `ODOO_ENABLE_CLEANUP_TOOLS`)
+- **Automatic file watching and hot reload** (no server restart needed)
+- **User notifications**: Success, error, and warning messages displayed in the UI
+- **REST API endpoints** for programmatic access:
   - `GET /api/config/{instances|tools|prompts|server}` - Retrieve config
   - `POST /api/config/{instances|tools|prompts|server}` - Update config
+  - `GET /api/config/auth/status` - Get MCP auth status
+  - `POST /api/config/auth/enable` - Enable/disable MCP HTTP auth
+  - `POST /api/config/auth/token/generate` - Generate new MCP auth token
+  - `POST /api/config/auth/credentials` - Update Config UI credentials
   - `GET /health` - Health check
 
-**Environment variable:**
+**Environment variables:**
 
 ```bash
+# Config server port
 export ODOO_CONFIG_SERVER_PORT=3008  # default: 3008 (inspired by Peugeot 3008)
+
+# Config UI Authentication (default credentials)
+export CONFIG_UI_USERNAME=admin      # default: admin
+export CONFIG_UI_PASSWORD=changeme   # default: changeme (CHANGE THIS!)
+
+# MCP HTTP Transport Authentication
+export MCP_AUTH_ENABLED=false        # default: false
+export MCP_AUTH_TOKEN=               # Bearer token (generate: openssl rand -hex 32)
 ```
+
+**First-time setup:**
+
+1. Open `http://localhost:3008`
+2. Login with default credentials (`admin` / `changeme`)
+3. **IMPORTANT**: Go to **Security** tab and change the default password immediately
+4. Configure your Odoo instances in the **Instances** tab
+5. Optionally enable MCP HTTP authentication from the **Security** tab
 
 **Example: Enable/disable cleanup tools via UI**
 
-1. Open `http://localhost:3008`
+1. Open `http://localhost:3008` and login
 2. Go to **Tools** tab
 3. Find the `odoo_create_batch` tool (or other cleanup operations)
 4. Toggle the **ODOO_ENABLE_CLEANUP_TOOLS** checkbox
 5. Save changes (file is auto-reloaded)
+
+**Example: Enable MCP HTTP Authentication**
+
+1. Open `http://localhost:3008` and login
+2. Go to **Security** tab
+3. Toggle **Enable MCP HTTP Authentication**
+4. Click **Generate New Token** (or use existing token)
+5. Changes apply immediately (hot-reload, no restart needed)
+6. Use the token in your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "odoo-rust-mcp": {
+      "url": "http://127.0.0.1:8787/mcp",
+      "headers": {
+        "Authorization": "Bearer your-generated-token-here"
+      }
+    }
+  }
+}
+```
+
+**Security Notes:**
+
+- Config UI credentials are stored in `.env` file (not in JSON configs)
+- MCP auth settings are also stored in `.env` and can be hot-reloaded
+- All configuration changes are validated before saving
+- Automatic backup and rollback prevent configuration corruption
+- For production, use strong passwords and secure tokens
 
 ### Installation
 
@@ -462,9 +531,12 @@ The binary automatically loads config from `~/.config/odoo-rust-mcp/env`, so you
 
 **Note:** Starting from v0.2.4, the binary (`rust-mcp`) automatically:
 - Creates `~/.config/odoo-rust-mcp/` directory if it doesn't exist
-- Creates a default `env` template file
+- Creates a default `env` template file with multi-instance configuration
 - Loads environment variables from `~/.config/odoo-rust-mcp/env`
-- Sets default MCP config paths from Homebrew share directory
+- Sets default MCP config paths (`MCP_TOOLS_JSON`, `MCP_PROMPTS_JSON`, `MCP_SERVER_JSON`) pointing to user config directory
+- Copies default config files from Homebrew share directory if they don't exist
+- Migrates existing single-instance configurations to `instances.json` format
+- Adds missing environment variables (like `CONFIG_UI_USERNAME`, `CONFIG_UI_PASSWORD`, `MCP_AUTH_ENABLED`) to existing `.env` files
 
 This means you can use `rust-mcp` directly without the shell wrapper `rust-mcp-service`. This is especially important for MCP clients like Windsurf that don't support shell script execution.
 
@@ -743,12 +815,20 @@ For integration with tools like n8n or Dify, refer to the OpenAPI specification 
 
 The HTTP transport supports Bearer token authentication as per the [MCP specification](https://modelcontextprotocol.io/specification/draft/basic/authorization).
 
-**Enable authentication:**
+**Enable authentication via environment variables:**
 ```bash
+export MCP_AUTH_ENABLED=true
 export MCP_AUTH_TOKEN=your-secure-random-token-here
 ```
 
-When `MCP_AUTH_TOKEN` is set, all HTTP requests must include the `Authorization` header:
+**Or enable via Config UI (recommended):**
+1. Open `http://localhost:3008` and login
+2. Go to **Security** tab
+3. Toggle **Enable MCP HTTP Authentication**
+4. Click **Generate New Token** or paste your existing token
+5. Changes apply immediately (hot-reload, no restart needed)
+
+When `MCP_AUTH_ENABLED=true` and `MCP_AUTH_TOKEN` is set, all HTTP requests must include the `Authorization` header:
 ```
 Authorization: Bearer your-secure-random-token-here
 ```
@@ -761,10 +841,16 @@ curl -X POST http://127.0.0.1:8787/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}'
 ```
 
+**Hot-Reload Support:**
+- Authentication settings can be enabled/disabled and tokens can be regenerated from the Config UI
+- Changes take effect immediately without restarting the service
+- The server uses `Arc<RwLock>` for thread-safe, dynamic configuration updates
+
 **Notes:**
-- If `MCP_AUTH_TOKEN` is not set, authentication is disabled (not recommended for production)
+- If `MCP_AUTH_ENABLED=false` or `MCP_AUTH_TOKEN` is not set, authentication is disabled (not recommended for production)
 - STDIO transport does not use HTTP authentication (credentials come from environment)
 - Generate a secure token: `openssl rand -hex 32`
+- For production deployments, always enable authentication
 
 ### Run (WebSocket / standalone server)
 
