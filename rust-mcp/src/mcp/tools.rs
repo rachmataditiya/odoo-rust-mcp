@@ -1403,4 +1403,3 @@ mod tests {
         assert_eq!(result, Some(&json!("b")));
     }
 }
-

@@ -147,10 +147,20 @@ cd config-ui && npm run test:coverage         # TS coverage (Istanbul)
 
 ### Pre-Commit Checklist
 ```bash
-cargo fmt --all                               # Format Rust
-cargo clippy --all-targets --all-features -- -D warnings  # Lint Rust
-cd config-ui && npm run lint && npm test     # Lint & test TS
+# REQUIRED: Run these BEFORE committing
+cargo fmt --all                               # Format Rust code
+cargo clippy --all-targets --all-features -- -D warnings  # Lint Rust code
+
+cd config-ui && npm run lint && npm test     # Lint & test TypeScript
+
+# Do NOT commit if any of these fail!
+# CI will block the commit if fmt/clippy have errors.
 ```
+
+**Important**: The CI pipeline has dedicated jobs for `fmt` and `clippy`:
+- If `cargo fmt` produces different output, CI will **FAIL**
+- If `cargo clippy` has warnings, CI will **FAIL**
+- Always run these locally before pushing
 
 ## 🔐 Important Patterns & Gotchas
 
