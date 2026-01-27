@@ -29,23 +29,58 @@ if [ ! -d "$CONFIG_DIR" ]; then
     echo "Created config directory: $CONFIG_DIR"
 fi
 
+# Create instances.json for multi-instance configuration
+if [ ! -f "$CONFIG_DIR/instances.json" ]; then
+    cat > "$CONFIG_DIR/instances.json" << 'EOF'
+{
+  "production": {
+    "url": "http://localhost:8069",
+    "db": "production",
+    "apiKey": "YOUR_ODOO_19_API_KEY"
+  },
+  "staging": {
+    "url": "http://localhost:8069",
+    "db": "staging",
+    "apiKey": "YOUR_STAGING_API_KEY"
+  },
+  "development": {
+    "url": "http://localhost:8069",
+    "db": "development",
+    "version": "18",
+    "username": "admin",
+    "password": "admin"
+  }
+}
+EOF
+    chown "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR/instances.json"
+    chmod 600 "$CONFIG_DIR/instances.json"
+    echo "Created default instances.json: $CONFIG_DIR/instances.json"
+fi
+
 # Create default env file if it doesn't exist
 if [ ! -f "$CONFIG_DIR/env" ]; then
-    cat > "$CONFIG_DIR/env" << 'EOF'
+    cat > "$CONFIG_DIR/env" << EOF
 # Odoo Rust MCP Server Configuration
-# Edit this file with your Odoo credentials
+# Multi-instance configuration (default)
 
-# Odoo 19+ (API Key authentication)
-ODOO_URL=http://localhost:8069
-ODOO_DB=mydb
-ODOO_API_KEY=YOUR_API_KEY
+# =============================================================================
+# Multi-Instance Configuration (Default - Recommended)
+# =============================================================================
+# Uses instances.json for multiple Odoo instances
+ODOO_INSTANCES_JSON=$CONFIG_DIR/instances.json
 
-# Odoo < 19 (Username/Password authentication)
+# =============================================================================
+# Single Instance Configuration (Alternative - uncomment if not using multi-instance)
+# =============================================================================
+# # Odoo 19+ (API Key authentication)
 # ODOO_URL=http://localhost:8069
 # ODOO_DB=mydb
-# ODOO_VERSION=18
-# ODOO_USERNAME=admin
-# ODOO_PASSWORD=admin
+# ODOO_API_KEY=YOUR_API_KEY
+#
+# # Odoo < 19 (Username/Password authentication)
+# # ODOO_VERSION=18
+# # ODOO_USERNAME=admin
+# # ODOO_PASSWORD=admin
 
 # MCP Authentication (HTTP transport)
 # Generate a secure token: openssl rand -hex 32
@@ -61,12 +96,13 @@ echo "=============================================="
 echo "rust-mcp installed successfully!"
 echo "=============================================="
 echo ""
-echo "Configuration: $CONFIG_DIR/env"
-echo "Please edit it with your Odoo credentials."
+echo "Configuration:"
+echo "  Instances: $CONFIG_DIR/instances.json"
+echo "  Env file:  $CONFIG_DIR/env"
 echo ""
 echo "Quick start:"
-echo "  1. Edit config:  nano $CONFIG_DIR/env"
-echo "  2. Start service: sudo systemctl start rust-mcp"
+echo "  1. Edit instances: nano $CONFIG_DIR/instances.json"
+echo "  2. Start service:  sudo systemctl start rust-mcp"
 echo "  3. Enable on boot: sudo systemctl enable rust-mcp"
 echo ""
 echo "Service endpoint: http://127.0.0.1:8787/mcp"

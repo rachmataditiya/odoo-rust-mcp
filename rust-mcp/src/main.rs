@@ -39,21 +39,51 @@ fn get_share_dir() -> Option<PathBuf> {
     candidates.into_iter().find(|path| path.exists())
 }
 
-/// Default env file template
+/// Default instances.json template for multi-instance configuration
+const DEFAULT_INSTANCES_TEMPLATE: &str = r#"{
+  "production": {
+    "url": "http://localhost:8069",
+    "db": "production",
+    "apiKey": "YOUR_ODOO_19_API_KEY"
+  },
+  "staging": {
+    "url": "http://localhost:8069",
+    "db": "staging",
+    "apiKey": "YOUR_STAGING_API_KEY"
+  },
+  "development": {
+    "url": "http://localhost:8069",
+    "db": "development",
+    "version": "18",
+    "username": "admin",
+    "password": "admin"
+  }
+}
+"#;
+
+/// Default env file template (multi-instance by default)
 const DEFAULT_ENV_TEMPLATE: &str = r#"# Odoo Rust MCP Server Configuration
-# Edit this file with your Odoo credentials
+# Multi-instance configuration (default)
 
-# Odoo 19+ (API Key authentication)
-ODOO_URL=http://localhost:8069
-ODOO_DB=mydb
-ODOO_API_KEY=YOUR_API_KEY
+# =============================================================================
+# Multi-Instance Configuration (Default - Recommended)
+# =============================================================================
+# Uses instances.json for multiple Odoo instances
+# The path below will be automatically set based on your config directory
+# ODOO_INSTANCES_JSON is set automatically if instances.json exists
 
-# Odoo < 19 (Username/Password authentication)
+# =============================================================================
+# Single Instance Configuration (Alternative - uncomment if not using multi-instance)
+# =============================================================================
+# # Odoo 19+ (API Key authentication)
 # ODOO_URL=http://localhost:8069
 # ODOO_DB=mydb
-# ODOO_VERSION=18
-# ODOO_USERNAME=admin
-# ODOO_PASSWORD=admin
+# ODOO_API_KEY=YOUR_API_KEY
+#
+# # Odoo < 19 (Username/Password authentication)
+# # ODOO_VERSION=18
+# # ODOO_USERNAME=admin
+# # ODOO_PASSWORD=admin
 
 # MCP Authentication (HTTP transport)
 # Generate a secure token: openssl rand -hex 32
@@ -76,6 +106,26 @@ fn setup_user_config() {
         }
     }
 
+    // Create default instances.json for multi-instance configuration
+    let instances_file = config_dir.join("instances.json");
+    if !instances_file.exists() {
+        if let Err(e) = fs::write(&instances_file, DEFAULT_INSTANCES_TEMPLATE) {
+            warn!(
+                "Failed to create default instances.json {:?}: {}",
+                instances_file, e
+            );
+        } else {
+            // Set restrictive permissions on instances file (Unix only)
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = fs::set_permissions(&instances_file, fs::Permissions::from_mode(0o600));
+            }
+            info!("Created default instances.json: {:?}", instances_file);
+            info!("Please edit it with your Odoo credentials");
+        }
+    }
+
     // Create default env file if it doesn't exist
     let env_file = config_dir.join("env");
     if !env_file.exists() {
@@ -89,13 +139,25 @@ fn setup_user_config() {
                 let _ = fs::set_permissions(&env_file, fs::Permissions::from_mode(0o600));
             }
             info!("Created default env file: {:?}", env_file);
-            info!("Please edit it with your Odoo credentials");
         }
     }
 
     // Load environment variables from env file
     if env_file.exists() {
         load_env_file(&env_file);
+    }
+
+    // Set ODOO_INSTANCES_JSON to user config if not already set and file exists
+    if std::env::var("ODOO_INSTANCES_JSON").is_err() && instances_file.exists() {
+        // SAFETY: This is called early in main() before any threads are spawned,
+        // and we're setting a new env var (not modifying an existing one being read).
+        unsafe {
+            std::env::set_var("ODOO_INSTANCES_JSON", &instances_file);
+        }
+        info!(
+            "Using instances.json from user config: {:?}",
+            instances_file
+        );
     }
 
     // Set default MCP config paths if not already set

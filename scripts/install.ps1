@@ -112,36 +112,72 @@ function Install-Service {
         Install-OdooMcp
     }
 
+    $InstancesFile = "$ConfigDir\instances.json"
+
+    # Create instances.json for multi-instance configuration
+    if (-not (Test-Path $InstancesFile)) {
+        Write-Info "Creating instances.json at $InstancesFile..."
+        @'
+{
+  "production": {
+    "url": "http://localhost:8069",
+    "db": "production",
+    "apiKey": "YOUR_ODOO_19_API_KEY"
+  },
+  "staging": {
+    "url": "http://localhost:8069",
+    "db": "staging",
+    "apiKey": "YOUR_STAGING_API_KEY"
+  },
+  "development": {
+    "url": "http://localhost:8069",
+    "db": "development",
+    "version": "18",
+    "username": "admin",
+    "password": "admin"
+  }
+}
+'@ | Out-File -FilePath $InstancesFile -Encoding UTF8
+        Write-Warn "Please edit $InstancesFile with your Odoo credentials"
+    }
+
     # Create environment file if not exists
     if (-not (Test-Path $EnvFile)) {
         Write-Info "Creating environment file at $EnvFile..."
-        @'
+        @"
 # Odoo MCP Server Environment Configuration
-# Edit this file with your Odoo credentials
+# Multi-instance configuration (default)
 # This file is sourced by the Windows Service
 
-# Odoo 19+ (API Key authentication)
-$env:ODOO_URL = "http://localhost:8069"
-$env:ODOO_DB = "mydb"
-$env:ODOO_API_KEY = "YOUR_API_KEY"
+# =============================================================================
+# Multi-Instance Configuration (Default - Recommended)
+# =============================================================================
+# Uses instances.json for multiple Odoo instances
+`$env:ODOO_INSTANCES_JSON = "$InstancesFile"
 
-# Odoo < 19 (Username/Password authentication)
-# $env:ODOO_URL = "http://localhost:8069"
-# $env:ODOO_DB = "mydb"
-# $env:ODOO_VERSION = "18"
-# $env:ODOO_USERNAME = "admin"
-# $env:ODOO_PASSWORD = "admin"
+# =============================================================================
+# Single Instance Configuration (Alternative - uncomment if not using multi-instance)
+# =============================================================================
+# # Odoo 19+ (API Key authentication)
+# `$env:ODOO_URL = "http://localhost:8069"
+# `$env:ODOO_DB = "mydb"
+# `$env:ODOO_API_KEY = "YOUR_API_KEY"
+#
+# # Odoo < 19 (Username/Password authentication)
+# # `$env:ODOO_VERSION = "18"
+# # `$env:ODOO_USERNAME = "admin"
+# # `$env:ODOO_PASSWORD = "admin"
 
 # MCP Authentication (HTTP transport)
 # Generate a secure token in PowerShell: [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
-$env:MCP_AUTH_TOKEN = "CHANGE_ME_TO_A_SECURE_TOKEN"
+`$env:MCP_AUTH_TOKEN = "CHANGE_ME_TO_A_SECURE_TOKEN"
 
 # MCP Config paths
-$env:MCP_TOOLS_JSON = "C:\ProgramData\odoo-rust-mcp\tools.json"
-$env:MCP_PROMPTS_JSON = "C:\ProgramData\odoo-rust-mcp\prompts.json"
-$env:MCP_SERVER_JSON = "C:\ProgramData\odoo-rust-mcp\server.json"
-'@ | Out-File -FilePath $EnvFile -Encoding UTF8
-        Write-Warn "Please edit $EnvFile with your Odoo credentials and MCP_AUTH_TOKEN"
+`$env:MCP_TOOLS_JSON = "$ConfigDir\tools.json"
+`$env:MCP_PROMPTS_JSON = "$ConfigDir\prompts.json"
+`$env:MCP_SERVER_JSON = "$ConfigDir\server.json"
+"@ | Out-File -FilePath $EnvFile -Encoding UTF8
+        Write-Warn "Please edit $EnvFile with your MCP_AUTH_TOKEN"
     }
 
     # Create wrapper script for service

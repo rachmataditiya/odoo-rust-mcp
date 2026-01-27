@@ -108,6 +108,7 @@ jobs:
           cp README.md release/
           cp LICENSE release/ 2>/dev/null || echo "No LICENSE file"
           cp dotenv.example release/.env.example
+          cp instances.example.json release/instances.json
           cp scripts/install.sh release/
           chmod +x release/install.sh
           cd release
@@ -131,6 +132,7 @@ jobs:
           Copy-Item README.md -Destination release/
           Copy-Item LICENSE -Destination release/ -ErrorAction SilentlyContinue
           Copy-Item dotenv.example -Destination release/.env.example
+          Copy-Item instances.example.json -Destination release/instances.json
           Copy-Item scripts/install.ps1 -Destination release/
           Compress-Archive -Path release/* -DestinationPath "${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}"
 
@@ -544,6 +546,12 @@ jobs:
           for f in tools.json prompts.json server.json; do
             [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists"
           done
+          
+          # Test that rust-mcp-service creates instances.json on first run
+          rust-mcp-service --help 2>/dev/null || true
+          CONFIG_DIR="$HOME/.config/odoo-rust-mcp"
+          [ -f "$CONFIG_DIR/instances.json" ] && echo "PASS: instances.json created by service wrapper"
+          [ -f "$CONFIG_DIR/env" ] && echo "PASS: env file created by service wrapper"
 
       - name: Cleanup
         run: |
@@ -568,12 +576,19 @@ jobs:
       - name: Verify installation
         run: |
           [ -f "/usr/bin/rust-mcp" ] && echo "PASS: rust-mcp installed"
+          [ -f "/usr/bin/rust-mcp-service" ] && echo "PASS: rust-mcp-service installed"
           rust-mcp --help
           
           SHARE_DIR="/usr/share/rust-mcp"
           for f in tools.json prompts.json server.json; do
             [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists"
           done
+          
+          # Test that rust-mcp-service creates instances.json on first run
+          rust-mcp-service --help 2>/dev/null || true
+          CONFIG_DIR="$HOME/.config/rust-mcp"
+          [ -f "$CONFIG_DIR/instances.json" ] && echo "PASS: instances.json created by service wrapper"
+          [ -f "$CONFIG_DIR/env" ] && echo "PASS: env file created by service wrapper"
 
       - name: Cleanup
         run: sudo apt-get remove -y rust-mcp || true
@@ -594,9 +609,14 @@ jobs:
         run: |
           mkdir -p test-release && cd test-release
           curl -sL "https://github.com/rachmataditiya/odoo-rust-mcp/releases/latest/download/rust-mcp-x86_64-unknown-linux-gnu.tar.gz" | tar xz
+          
+          # Verify instances.json is included in release
+          [ -f "instances.json" ] && echo "PASS: instances.json included in release"
+          
           cp ../scripts/install.sh . && chmod +x install.sh
           PREFIX="$HOME/.local" ./install.sh
           [ -f "$HOME/.local/bin/rust-mcp" ] && echo "PASS: Binary installed"
+          [ -f "$HOME/.local/share/odoo-rust-mcp/instances.json" ] || echo "Note: instances.json will be created on first run"
           $HOME/.local/bin/rust-mcp --help
           PREFIX="$HOME/.local" ./install.sh uninstall
           [ ! -f "$HOME/.local/bin/rust-mcp" ] && echo "PASS: Binary removed"
@@ -614,4 +634,9 @@ jobs:
           if (Test-Path test-release/rust-mcp.exe) {
             Write-Host "PASS: Binary exists"
             & test-release/rust-mcp.exe --help
+          }
+          
+          # Verify instances.json is included in release
+          if (Test-Path test-release/instances.json) {
+            Write-Host "PASS: instances.json included in release"
           }

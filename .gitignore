@@ -6,6 +6,10 @@ rust-mcp/static/dist/
 .env
 .env.*
 
+# Multi-instance configuration (contains credentials)
+instances.json
+!instances.example.json
+
 node_modules/
 config-ui/node_modules/
 config-ui/dist/

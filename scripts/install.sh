@@ -121,36 +121,72 @@ uninstall() {
 install_systemd_service() {
     info "Installing systemd service..."
 
+    # Create instances.json for multi-instance configuration
+    local instances_file="${CONFIG_DIR}/instances.json"
+    if [ ! -f "$instances_file" ]; then
+        info "Creating instances.json at $instances_file..."
+        $NEED_SUDO tee "$instances_file" > /dev/null << 'INSTANCESEOF'
+{
+  "production": {
+    "url": "http://localhost:8069",
+    "db": "production",
+    "apiKey": "YOUR_ODOO_19_API_KEY"
+  },
+  "staging": {
+    "url": "http://localhost:8069",
+    "db": "staging",
+    "apiKey": "YOUR_STAGING_API_KEY"
+  },
+  "development": {
+    "url": "http://localhost:8069",
+    "db": "development",
+    "version": "18",
+    "username": "admin",
+    "password": "admin"
+  }
+}
+INSTANCESEOF
+        $NEED_SUDO chmod 600 "$instances_file"
+        warn "Please edit $instances_file with your Odoo credentials"
+    fi
+
     # Create environment file if not exists
     if [ ! -f "$ENV_FILE" ]; then
         info "Creating environment file at $ENV_FILE..."
-        sudo tee "$ENV_FILE" > /dev/null << 'ENVEOF'
+        sudo tee "$ENV_FILE" > /dev/null << ENVEOF
 # Odoo MCP Server Environment Configuration
-# Edit this file with your Odoo credentials
+# Multi-instance configuration (default)
 
-# Odoo 19+ (API Key authentication)
-ODOO_URL=http://localhost:8069
-ODOO_DB=mydb
-ODOO_API_KEY=YOUR_API_KEY
+# =============================================================================
+# Multi-Instance Configuration (Default - Recommended)
+# =============================================================================
+# Uses instances.json for multiple Odoo instances
+ODOO_INSTANCES_JSON=${CONFIG_DIR}/instances.json
 
-# Odoo < 19 (Username/Password authentication)
+# =============================================================================
+# Single Instance Configuration (Alternative - uncomment if not using multi-instance)
+# =============================================================================
+# # Odoo 19+ (API Key authentication)
 # ODOO_URL=http://localhost:8069
 # ODOO_DB=mydb
-# ODOO_VERSION=18
-# ODOO_USERNAME=admin
-# ODOO_PASSWORD=admin
+# ODOO_API_KEY=YOUR_API_KEY
+#
+# # Odoo < 19 (Username/Password authentication)
+# # ODOO_VERSION=18
+# # ODOO_USERNAME=admin
+# # ODOO_PASSWORD=admin
 
 # MCP Authentication (HTTP transport)
 # Generate a secure token: openssl rand -hex 32
 MCP_AUTH_TOKEN=CHANGE_ME_TO_A_SECURE_TOKEN
 
 # MCP Config paths
-MCP_TOOLS_JSON=/usr/local/share/odoo-rust-mcp/tools.json
-MCP_PROMPTS_JSON=/usr/local/share/odoo-rust-mcp/prompts.json
-MCP_SERVER_JSON=/usr/local/share/odoo-rust-mcp/server.json
+MCP_TOOLS_JSON=${CONFIG_DIR}/tools.json
+MCP_PROMPTS_JSON=${CONFIG_DIR}/prompts.json
+MCP_SERVER_JSON=${CONFIG_DIR}/server.json
 ENVEOF
         sudo chmod 600 "$ENV_FILE"
-        warn "Please edit $ENV_FILE with your Odoo credentials and MCP_AUTH_TOKEN"
+        warn "Please edit $ENV_FILE with your MCP_AUTH_TOKEN"
     fi
 
     # Create systemd service file
@@ -203,42 +239,78 @@ install_launchd_service() {
     local plist_path="$HOME/Library/LaunchAgents/com.odoo.rust-mcp.plist"
     local user_config_dir="$HOME/.config/odoo-rust-mcp"
     local user_env_file="$user_config_dir/env"
+    local user_instances_file="$user_config_dir/instances.json"
     local service_name="com.odoo.rust-mcp"
     local uid=$(id -u)
 
     # Create user config directory
     mkdir -p "$user_config_dir"
 
+    # Create instances.json for multi-instance configuration
+    if [ ! -f "$user_instances_file" ]; then
+        info "Creating instances.json at $user_instances_file..."
+        cat > "$user_instances_file" << 'INSTANCESEOF'
+{
+  "production": {
+    "url": "http://localhost:8069",
+    "db": "production",
+    "apiKey": "YOUR_ODOO_19_API_KEY"
+  },
+  "staging": {
+    "url": "http://localhost:8069",
+    "db": "staging",
+    "apiKey": "YOUR_STAGING_API_KEY"
+  },
+  "development": {
+    "url": "http://localhost:8069",
+    "db": "development",
+    "version": "18",
+    "username": "admin",
+    "password": "admin"
+  }
+}
+INSTANCESEOF
+        chmod 600 "$user_instances_file"
+        warn "Please edit $user_instances_file with your Odoo credentials"
+    fi
+
     # Create environment file if not exists
     if [ ! -f "$user_env_file" ]; then
         info "Creating environment file at $user_env_file..."
-        cat > "$user_env_file" << 'ENVEOF'
+        cat > "$user_env_file" << ENVEOF
 # Odoo MCP Server Environment Configuration
-# Edit this file with your Odoo credentials
+# Multi-instance configuration (default)
 
-# Odoo 19+ (API Key authentication)
-ODOO_URL=http://localhost:8069
-ODOO_DB=mydb
-ODOO_API_KEY=YOUR_API_KEY
+# =============================================================================
+# Multi-Instance Configuration (Default - Recommended)
+# =============================================================================
+# Uses instances.json for multiple Odoo instances
+ODOO_INSTANCES_JSON=$user_config_dir/instances.json
 
-# Odoo < 19 (Username/Password authentication)
+# =============================================================================
+# Single Instance Configuration (Alternative - uncomment if not using multi-instance)
+# =============================================================================
+# # Odoo 19+ (API Key authentication)
 # ODOO_URL=http://localhost:8069
 # ODOO_DB=mydb
-# ODOO_VERSION=18
-# ODOO_USERNAME=admin
-# ODOO_PASSWORD=admin
+# ODOO_API_KEY=YOUR_API_KEY
+#
+# # Odoo < 19 (Username/Password authentication)
+# # ODOO_VERSION=18
+# # ODOO_USERNAME=admin
+# # ODOO_PASSWORD=admin
 
 # MCP Authentication (HTTP transport)
 # Generate a secure token: openssl rand -hex 32
 MCP_AUTH_TOKEN=CHANGE_ME_TO_A_SECURE_TOKEN
 
 # MCP Config paths
-MCP_TOOLS_JSON=/usr/local/share/odoo-rust-mcp/tools.json
-MCP_PROMPTS_JSON=/usr/local/share/odoo-rust-mcp/prompts.json
-MCP_SERVER_JSON=/usr/local/share/odoo-rust-mcp/server.json
+MCP_TOOLS_JSON=$CONFIG_DIR/tools.json
+MCP_PROMPTS_JSON=$CONFIG_DIR/prompts.json
+MCP_SERVER_JSON=$CONFIG_DIR/server.json
 ENVEOF
         chmod 600 "$user_env_file"
-        warn "Please edit $user_env_file with your Odoo credentials and MCP_AUTH_TOKEN"
+        warn "Please edit $user_env_file with your MCP_AUTH_TOKEN"
     fi
 
     # Create launchd plist

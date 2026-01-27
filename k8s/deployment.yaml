@@ -63,27 +63,27 @@ spec:
           # Environment variables
           env:
             # =========================================================================
-            # Single Instance Configuration
+            # Multi-Instance Configuration (default - recommended)
             # =========================================================================
-            - name: ODOO_URL
-              value: "http://odoo-service:8069"
-            - name: ODOO_DB
-              value: "production"
-            
-            # API Key from Secret
-            - name: ODOO_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: odoo-mcp-secrets
-                  key: ODOO_API_KEY
-                  optional: true
+            # Uses instances.json from ConfigMap
+            - name: ODOO_INSTANCES_JSON
+              value: "/config/instances.json"
             
             # =========================================================================
-            # Multi-Instance Configuration (optional)
+            # Single Instance Configuration (fallback - uncomment if not using multi-instance)
             # =========================================================================
-            # Point to instances.json file if using multi-instance
-            # - name: ODOO_INSTANCES_JSON
-            #   value: "/config/instances.json"
+            # - name: ODOO_URL
+            #   value: "http://odoo-service:8069"
+            # - name: ODOO_DB
+            #   value: "production"
+            # 
+            # # API Key from Secret
+            # - name: ODOO_API_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: odoo-mcp-secrets
+            #       key: ODOO_API_KEY
+            #       optional: true
             
             # =========================================================================
             # MCP Configuration Paths
@@ -191,6 +191,6 @@ spec:
                 path: prompts.json
               - key: server.json
                 path: server.json
-              # Uncomment if using instances.json for multi-instance
-              # - key: instances.json
-              #   path: instances.json
+              # Multi-instance configuration (default)
+              - key: instances.json
+                path: instances.json

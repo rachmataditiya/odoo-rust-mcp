@@ -1885,7 +1885,7 @@ dependencies = [
 
 [[package]]
 name = "rust-mcp"
-version = "0.3.20"
+version = "0.3.22"
 dependencies = [
  "anyhow",
  "async-stream",

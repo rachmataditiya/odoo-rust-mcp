@@ -40,8 +40,8 @@ services:
       - ./config/tools.json:/config/tools.json:ro
       - ./config/prompts.json:/config/prompts.json:ro
       - ./config/server.json:/config/server.json:ro
-      # Optional: Multi-instance configuration file
-      # - ./instances.json:/config/instances.json:ro
+      # Multi-instance configuration file (default setup)
+      - ./instances.json:/config/instances.json:ro
     
     # Environment file
     env_file:
@@ -49,28 +49,29 @@ services:
     
     environment:
       # =========================================================================
-      # Single Instance Configuration (simple setup)
-      # =========================================================================
-      # For Odoo running on host machine, use host.docker.internal
-      ODOO_URL: "${ODOO_URL:-http://host.docker.internal:8069}"
-      ODOO_DB: "${ODOO_DB:-}"
-      
-      # Odoo 19+ (JSON-2 API with API Key)
-      ODOO_API_KEY: "${ODOO_API_KEY:-}"
-      
-      # Odoo < 19 (JSON-RPC with Username/Password)
-      ODOO_VERSION: "${ODOO_VERSION:-}"
-      ODOO_USERNAME: "${ODOO_USERNAME:-}"
-      ODOO_PASSWORD: "${ODOO_PASSWORD:-}"
-      
-      # =========================================================================
-      # Multi-Instance Configuration (advanced setup)
+      # Multi-Instance Configuration (default setup - recommended)
       # =========================================================================
       # Option 1: JSON file path (recommended for readability)
-      ODOO_INSTANCES_JSON: "${ODOO_INSTANCES_JSON:-}"
+      # Uses instances.json mounted above
+      ODOO_INSTANCES_JSON: "${ODOO_INSTANCES_JSON:-/config/instances.json}"
       
-      # Option 2: Inline JSON (set in .env file)
+      # Option 2: Inline JSON (set in .env file, takes precedence over file)
       ODOO_INSTANCES: "${ODOO_INSTANCES:-}"
+      
+      # =========================================================================
+      # Single Instance Configuration (fallback - uncomment if not using multi-instance)
+      # =========================================================================
+      # For Odoo running on host machine, use host.docker.internal
+      # ODOO_URL: "${ODOO_URL:-http://host.docker.internal:8069}"
+      # ODOO_DB: "${ODOO_DB:-}"
+      # 
+      # # Odoo 19+ (JSON-2 API with API Key)
+      # ODOO_API_KEY: "${ODOO_API_KEY:-}"
+      # 
+      # # Odoo < 19 (JSON-RPC with Username/Password)
+      # ODOO_VERSION: "${ODOO_VERSION:-}"
+      # ODOO_USERNAME: "${ODOO_USERNAME:-}"
+      # ODOO_PASSWORD: "${ODOO_PASSWORD:-}"
       
       # =========================================================================
       # MCP Configuration

@@ -3,47 +3,38 @@
 # DO NOT commit .env to version control!
 
 # =============================================================================
-# SINGLE INSTANCE CONFIGURATION (Simple Setup)
+# MULTI-INSTANCE CONFIGURATION (Recommended - Default Setup)
 # =============================================================================
-# Use this for connecting to a single Odoo instance.
-# For multiple instances, see MULTI-INSTANCE section below.
-
-# Odoo Server URL
-# - For Docker: use host.docker.internal for Odoo on host machine
-# - For Kubernetes: use the Odoo service name (e.g., odoo.namespace.svc.cluster.local)
-ODOO_URL=http://host.docker.internal:8069
-ODOO_DB=mydb
-
-# -----------------------------------------------------------------------------
-# Odoo 19+ (JSON-2 API with API Key)
-# -----------------------------------------------------------------------------
-# ODOO_API_KEY=YOUR_API_KEY
-
-# -----------------------------------------------------------------------------
-# Odoo < 19 (JSON-RPC with Username/Password)
-# -----------------------------------------------------------------------------
-# Set ODOO_VERSION to enable legacy mode
-ODOO_VERSION=18
-ODOO_USERNAME=admin
-ODOO_PASSWORD=admin
-
-# =============================================================================
-# MULTI-INSTANCE CONFIGURATION (Advanced Setup)
-# =============================================================================
-# Use this for connecting to multiple Odoo instances.
+# Multi-instance mode allows you to connect to multiple Odoo instances.
 # Each instance can be accessed by name in tool calls: {"instance": "production", ...}
 
 # Option 1: JSON File Path (Recommended - easier to read and edit)
-# Create a JSON file with your instances configuration:
-# {
-#   "production": {"url": "https://odoo.example.com", "db": "prod", "apiKey": "xxx"},
-#   "staging": {"url": "https://staging.example.com", "db": "staging", "apiKey": "yyy"}
-# }
-# ODOO_INSTANCES_JSON=/config/instances.json
+# Create a JSON file with your instances configuration (see instances.example.json)
+ODOO_INSTANCES_JSON=/config/instances.json
 
 # Option 2: Inline JSON (for simple setups or environment-only config)
-# Must be a single line!
-# ODOO_INSTANCES={"production":{"url":"https://odoo.example.com","db":"prod","apiKey":"xxx"},"staging":{"url":"https://staging.example.com","db":"staging","apiKey":"yyy"}}
+# Must be a single line! Uncomment and configure:
+# ODOO_INSTANCES={"production":{"url":"http://host.docker.internal:8069","db":"production","version":"18","username":"admin","password":"admin"},"staging":{"url":"http://staging.example.com:8069","db":"staging","apiKey":"YOUR_API_KEY"}}
+
+# =============================================================================
+# SINGLE INSTANCE CONFIGURATION (Simple Setup - Alternative)
+# =============================================================================
+# Use this only if you have a single Odoo instance.
+# Comment out ODOO_INSTANCES_JSON above and uncomment these settings.
+#
+# # Odoo Server URL
+# # - For Docker: use host.docker.internal for Odoo on host machine
+# # - For Kubernetes: use the Odoo service name (e.g., odoo.namespace.svc.cluster.local)
+# ODOO_URL=http://host.docker.internal:8069
+# ODOO_DB=mydb
+#
+# # Odoo 19+ (JSON-2 API with API Key)
+# # ODOO_API_KEY=YOUR_API_KEY
+#
+# # Odoo < 19 (JSON-RPC with Username/Password)
+# ODOO_VERSION=18
+# ODOO_USERNAME=admin
+# ODOO_PASSWORD=admin
 
 # =============================================================================
 # MCP AUTHENTICATION (HTTP Transport)
@@ -68,6 +59,9 @@ ODOO_PASSWORD=admin
 # =============================================================================
 # OPTIONAL SETTINGS
 # =============================================================================
+# Enable write tools (create, update, delete, execute)
+# ODOO_ENABLE_WRITE_TOOLS=true
+
 # Enable destructive cleanup tools (database cleanup, deep cleanup)
 # ODOO_ENABLE_CLEANUP_TOOLS=true
 
@@ -81,22 +75,21 @@ ODOO_PASSWORD=admin
 # EXAMPLES FOR DIFFERENT DEPLOYMENTS
 # =============================================================================
 
-# --- Docker Compose (Odoo on host) ---
-# ODOO_URL=http://host.docker.internal:8069
-# ODOO_DB=mydb
-# ODOO_API_KEY=your-api-key
+# --- Docker Compose (Multi-instance from file) ---
+# ODOO_INSTANCES_JSON=/config/instances.json
 
-# --- Docker Compose (Odoo in same network) ---
-# ODOO_URL=http://odoo:8069
-# ODOO_DB=mydb
-# ODOO_API_KEY=your-api-key
+# --- Docker Compose (Inline multi-instance) ---
+# ODOO_INSTANCES={"production":{"url":"http://host.docker.internal:8069","db":"prod","apiKey":"xxx"},"staging":{"url":"http://odoo:8069","db":"staging","apiKey":"yyy"}}
 
-# --- Kubernetes (Odoo in same namespace) ---
+# --- Kubernetes (Multi-instance from ConfigMap) ---
+# ODOO_INSTANCES_JSON=/config/instances.json
+
+# --- Kubernetes (Odoo in same namespace - single instance fallback) ---
 # ODOO_URL=http://odoo-service:8069
 # ODOO_DB=mydb
 # ODOO_API_KEY=your-api-key
 
-# --- Kubernetes (Odoo in different namespace) ---
+# --- Kubernetes (Odoo in different namespace - single instance fallback) ---
 # ODOO_URL=http://odoo-service.odoo-namespace.svc.cluster.local:8069
 # ODOO_DB=mydb
 # ODOO_API_KEY=your-api-key

@@ -71,19 +71,33 @@ pub struct OdooEnvConfig {
 
 pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
     let mut instances = HashMap::new();
+    let mut instances_json_path: Option<String> = None;
 
     // Priority 1: ODOO_INSTANCES_JSON file path (for readable multi-line JSON)
     if let Ok(path) = std::env::var("ODOO_INSTANCES_JSON") {
         let path = path.trim();
         if !path.is_empty() {
-            let content = std::fs::read_to_string(path).map_err(|e| {
-                anyhow::anyhow!("Failed to read ODOO_INSTANCES_JSON file '{path}': {e}")
-            })?;
-            let parsed: HashMap<String, OdooInstanceConfig> = serde_json::from_str(&content)
-                .map_err(|e| {
-                    anyhow::anyhow!("Failed to parse ODOO_INSTANCES_JSON file '{path}': {e}")
-                })?;
-            instances.extend(parsed);
+            instances_json_path = Some(path.to_string());
+            match std::fs::read_to_string(path) {
+                Ok(content) => {
+                    let parsed: HashMap<String, OdooInstanceConfig> =
+                        serde_json::from_str(&content).map_err(|e| {
+                            anyhow::anyhow!(
+                                "Failed to parse ODOO_INSTANCES_JSON file '{path}': {e}"
+                            )
+                        })?;
+                    instances.extend(parsed);
+                }
+                Err(e) => {
+                    // File not found - log warning but continue to fallback
+                    tracing::warn!(
+                        "ODOO_INSTANCES_JSON file '{}' not found or not readable: {}. \
+                        Falling back to ODOO_INSTANCES or single-instance env vars.",
+                        path,
+                        e
+                    );
+                }
+            }
         }
     }
     // Priority 2: ODOO_INSTANCES inline JSON (only if ODOO_INSTANCES_JSON was not set or empty)
@@ -163,11 +177,20 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
     }
 
     if instances.is_empty() {
-        anyhow::bail!(
-            "No Odoo instances configured. Set ODOO_INSTANCES or ODOO_URL + credentials.\n\
-             For Odoo 19+: ODOO_API_KEY\n\
-             For Odoo < 19: ODOO_USERNAME + ODOO_PASSWORD + ODOO_VERSION"
-        );
+        let mut msg = String::from("No Odoo instances configured.\n\n");
+        if let Some(path) = instances_json_path {
+            msg.push_str(&format!(
+                "ODOO_INSTANCES_JSON was set to '{}' but the file was not found or is empty.\n",
+                path
+            ));
+            msg.push_str("Please create the file with your Odoo instance configuration.\n\n");
+        }
+        msg.push_str("Configuration options:\n");
+        msg.push_str("  1. Multi-instance (recommended): Create instances.json file and set ODOO_INSTANCES_JSON\n");
+        msg.push_str("  2. Single-instance: Set ODOO_URL + credentials (ODOO_API_KEY or ODOO_USERNAME/PASSWORD)\n\n");
+        msg.push_str("For Odoo 19+: Use apiKey in instances.json or ODOO_API_KEY env var\n");
+        msg.push_str("For Odoo < 19: Use version + username + password in instances.json or ODOO_VERSION + ODOO_USERNAME + ODOO_PASSWORD env vars");
+        anyhow::bail!(msg);
     }
 
     // Ensure credentials are available per instance.

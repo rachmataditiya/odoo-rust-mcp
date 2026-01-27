@@ -30,25 +30,45 @@ autoscaling:
 # =============================================================================
 # Odoo Instance Configuration
 # =============================================================================
-# Single instance mode
-odoo:
-  # URL of Odoo server (use K8s service name for in-cluster)
-  url: "http://odoo-service:8069"
-  db: ""
-  # For Odoo 19+ with API Key (preferred)
-  apiKey: ""
-  # For Odoo < 19 with Username/Password
-  version: ""
-  username: ""
-  password: ""
-
-# Multi-instance mode (advanced)
+# Multi-instance mode (recommended - default)
 # Set either inline JSON or file path
 odooInstances:
-  # Inline JSON configuration (single line in final config)
-  json: ""
+  # Inline JSON configuration (takes precedence over jsonFilePath)
+  # Example with multiple instances:
+  json: |
+    {
+      "production": {
+        "url": "http://odoo-service:8069",
+        "db": "production",
+        "apiKey": ""
+      },
+      "staging": {
+        "url": "http://odoo-staging:8069",
+        "db": "staging",
+        "apiKey": ""
+      },
+      "legacy": {
+        "url": "http://odoo-legacy:8069",
+        "db": "legacy",
+        "version": "18",
+        "username": "admin",
+        "password": ""
+      }
+    }
   # Or use a separate file (create ConfigMap with instances.json)
   jsonFilePath: ""
+
+# Single instance mode (fallback - uncomment if not using multi-instance)
+# odoo:
+#   # URL of Odoo server (use K8s service name for in-cluster)
+#   url: "http://odoo-service:8069"
+#   db: ""
+#   # For Odoo 19+ with API Key (preferred)
+#   apiKey: ""
+#   # For Odoo < 19 with Username/Password
+#   version: ""
+#   username: ""
+#   password: ""
 
 # =============================================================================
 # MCP Configuration

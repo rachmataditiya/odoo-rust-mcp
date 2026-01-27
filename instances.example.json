@@ -2,18 +2,25 @@
   "production": {
     "url": "https://odoo.example.com",
     "db": "production",
-    "apiKey": "YOUR_API_KEY_HERE"
+    "apiKey": "YOUR_ODOO_19_PRODUCTION_API_KEY"
   },
   "staging": {
     "url": "https://staging.example.com",
     "db": "staging",
-    "apiKey": "YOUR_API_KEY_HERE"
+    "apiKey": "YOUR_ODOO_19_STAGING_API_KEY"
+  },
+  "development": {
+    "url": "http://host.docker.internal:8069",
+    "db": "development",
+    "version": "18",
+    "username": "admin",
+    "password": "admin"
   },
   "legacy": {
     "url": "https://legacy.example.com",
     "db": "legacy_db",
-    "version": "18",
+    "version": "17",
     "username": "admin",
-    "password": "YOUR_PASSWORD_HERE"
+    "password": "YOUR_LEGACY_PASSWORD"
   }
 }

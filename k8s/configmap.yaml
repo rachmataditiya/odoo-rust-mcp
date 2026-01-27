@@ -259,18 +259,25 @@ data:
       ]
     }
   
-  # Optional: instances.json for multi-instance configuration
-  # Uncomment and configure as needed
-  # instances.json: |
-  #   {
-  #     "production": {
-  #       "url": "http://odoo-service:8069",
-  #       "db": "production",
-  #       "apiKey": "${ODOO_PROD_API_KEY}"
-  #     },
-  #     "staging": {
-  #       "url": "http://odoo-staging:8069",
-  #       "db": "staging",
-  #       "apiKey": "${ODOO_STAGING_API_KEY}"
-  #     }
-  #   }
+  # Multi-instance configuration (default setup - recommended)
+  # Configure your Odoo instances here
+  instances.json: |
+    {
+      "production": {
+        "url": "http://odoo-service:8069",
+        "db": "production",
+        "apiKey": "YOUR_PRODUCTION_API_KEY"
+      },
+      "staging": {
+        "url": "http://odoo-staging:8069",
+        "db": "staging",
+        "apiKey": "YOUR_STAGING_API_KEY"
+      },
+      "legacy": {
+        "url": "http://odoo-legacy:8069",
+        "db": "legacy",
+        "version": "18",
+        "username": "admin",
+        "password": "YOUR_LEGACY_PASSWORD"
+      }
+    }
