@@ -578,25 +578,104 @@ jobs:
 
       - name: Verify installation
         run: |
+          echo "=== Verifying binary installation ==="
           command -v rust-mcp && echo "PASS: rust-mcp installed"
           command -v rust-mcp-service && echo "PASS: rust-mcp-service installed"
           rust-mcp --help
           
+          echo "=== Verifying config files ==="
           SHARE_DIR="$(brew --prefix)/share/odoo-rust-mcp"
           for f in tools.json prompts.json server.json; do
-            [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists"
+            [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists in $SHARE_DIR"
           done
           
-          # Test that rust-mcp-service creates instances.json on first run
+          echo "=== Testing service wrapper creates config ==="
           rust-mcp-service --help 2>/dev/null || true
           CONFIG_DIR="$HOME/.config/odoo-rust-mcp"
           [ -f "$CONFIG_DIR/instances.json" ] && echo "PASS: instances.json created by service wrapper"
           [ -f "$CONFIG_DIR/env" ] && echo "PASS: env file created by service wrapper"
+          
+          echo "=== Listing config directory ==="
+          ls -la "$CONFIG_DIR/" || true
+
+      - name: Test brew services
+        run: |
+          echo "=== Starting rust-mcp service via brew services ==="
+          brew services start rust-mcp
+          
+          echo "=== Waiting for service to start ==="
+          sleep 5
+          
+          echo "=== Checking brew services status ==="
+          brew services list
+          
+          echo "=== Checking if process is running ==="
+          if pgrep -f "rust-mcp.*--transport.*http" > /dev/null; then
+            echo "PASS: rust-mcp process is running"
+            pgrep -fl "rust-mcp" || true
+          else
+            echo "WARN: rust-mcp process not found via pgrep, checking brew services..."
+            brew services info rust-mcp || true
+          fi
+          
+          echo "=== Testing HTTP endpoint ==="
+          for i in $(seq 1 15); do
+            if curl -s http://127.0.0.1:8787/health > /dev/null 2>&1; then
+              echo "PASS: HTTP health endpoint responding"
+              curl -s http://127.0.0.1:8787/health | head -c 500
+              break
+            fi
+            echo "Waiting for HTTP endpoint... ($i/15)"
+            sleep 2
+          done
+          
+          echo ""
+          echo "=== Testing MCP endpoint ==="
+          MCP_RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
+            2>/dev/null || echo "")
+          
+          if echo "$MCP_RESPONSE" | grep -q "serverInfo"; then
+            echo "PASS: MCP initialize endpoint working"
+            echo "$MCP_RESPONSE" | head -c 500
+          else
+            echo "WARN: MCP endpoint may not be fully ready (expected during fresh install)"
+            echo "Response: $MCP_RESPONSE"
+          fi
+          
+          echo ""
+          echo "=== Checking service logs ==="
+          LOG_FILE="$(brew --prefix)/var/log/rust-mcp.log"
+          if [ -f "$LOG_FILE" ]; then
+            echo "Log file contents (last 30 lines):"
+            tail -30 "$LOG_FILE" || true
+          else
+            echo "Log file not found at $LOG_FILE"
+          fi
+          
+          echo ""
+          echo "=== Stopping service ==="
+          brew services stop rust-mcp
+          sleep 2
+          
+          if ! pgrep -f "rust-mcp.*--transport.*http" > /dev/null; then
+            echo "PASS: Service stopped cleanly"
+          else
+            echo "WARN: Process may still be running"
+            pgrep -fl "rust-mcp" || true
+          fi
+          
+          echo ""
+          echo "=== Final brew services status ==="
+          brew services list
 
       - name: Cleanup
         run: |
+          brew services stop rust-mcp 2>/dev/null || true
           brew uninstall rust-mcp || true
           brew untap rachmataditiya/odoo-rust-mcp || true
+          rm -rf "$HOME/.config/odoo-rust-mcp" 2>/dev/null || true
 
   test-apt:
     name: Test APT Package (Linux)
@@ -615,23 +694,94 @@ jobs:
 
       - name: Verify installation
         run: |
+          echo "=== Verifying binary installation ==="
           [ -f "/usr/bin/rust-mcp" ] && echo "PASS: rust-mcp installed"
           [ -f "/usr/bin/rust-mcp-service" ] && echo "PASS: rust-mcp-service installed"
           rust-mcp --help
           
+          echo "=== Verifying config files ==="
           SHARE_DIR="/usr/share/rust-mcp"
           for f in tools.json prompts.json server.json; do
-            [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists"
+            [ -f "$SHARE_DIR/$f" ] && echo "PASS: $f exists in $SHARE_DIR"
           done
           
-          # Test that rust-mcp-service creates instances.json on first run
+          echo "=== Verifying systemd service file ==="
+          [ -f "/lib/systemd/system/rust-mcp.service" ] && echo "PASS: systemd service file installed"
+          
+          echo "=== Testing service wrapper creates config ==="
           rust-mcp-service --help 2>/dev/null || true
           CONFIG_DIR="$HOME/.config/rust-mcp"
           [ -f "$CONFIG_DIR/instances.json" ] && echo "PASS: instances.json created by service wrapper"
           [ -f "$CONFIG_DIR/env" ] && echo "PASS: env file created by service wrapper"
 
+      - name: Test systemd service
+        run: |
+          echo "=== Reloading systemd daemon ==="
+          sudo systemctl daemon-reload
+          
+          echo "=== Enabling rust-mcp service ==="
+          sudo systemctl enable rust-mcp
+          echo "PASS: Service enabled"
+          
+          echo "=== Starting rust-mcp service ==="
+          sudo systemctl start rust-mcp
+          
+          echo "=== Waiting for service to start ==="
+          sleep 3
+          
+          echo "=== Checking service status ==="
+          sudo systemctl status rust-mcp --no-pager || true
+          
+          if sudo systemctl is-active --quiet rust-mcp; then
+            echo "PASS: rust-mcp service is running"
+          else
+            echo "FAIL: rust-mcp service is not running"
+            echo "=== Service logs ==="
+            sudo journalctl -u rust-mcp --no-pager -n 50
+            exit 1
+          fi
+          
+          echo "=== Testing HTTP endpoint ==="
+          for i in $(seq 1 10); do
+            if curl -s http://127.0.0.1:8787/health > /dev/null 2>&1; then
+              echo "PASS: HTTP health endpoint responding"
+              curl -s http://127.0.0.1:8787/health | head -c 500
+              break
+            fi
+            echo "Waiting for HTTP endpoint... ($i/10)"
+            sleep 1
+          done
+          
+          echo ""
+          echo "=== Testing MCP endpoint ==="
+          MCP_RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
+            2>/dev/null || echo "")
+          
+          if echo "$MCP_RESPONSE" | grep -q "serverInfo"; then
+            echo "PASS: MCP initialize endpoint working"
+            echo "$MCP_RESPONSE" | head -c 500
+          else
+            echo "WARN: MCP endpoint may not be fully ready (expected during fresh install)"
+          fi
+          
+          echo ""
+          echo "=== Stopping service ==="
+          sudo systemctl stop rust-mcp
+          
+          if ! sudo systemctl is-active --quiet rust-mcp; then
+            echo "PASS: Service stopped cleanly"
+          else
+            echo "FAIL: Service did not stop"
+            exit 1
+          fi
+
       - name: Cleanup
-        run: sudo apt-get remove -y rust-mcp || true
+        run: |
+          sudo systemctl stop rust-mcp 2>/dev/null || true
+          sudo systemctl disable rust-mcp 2>/dev/null || true
+          sudo apt-get remove -y rust-mcp || true
 
   test-install-script:
     name: Test Install Scripts

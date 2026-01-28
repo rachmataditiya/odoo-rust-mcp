@@ -350,3 +350,297 @@ jobs:
       
       - name: Build release binary
         run: cargo build --release --manifest-path rust-mcp/Cargo.toml
+
+  # =============================================================================
+  # Stage 4: Service Integration Tests (depends on build-release)
+  # =============================================================================
+  test-systemd-service:
+    name: Test Systemd Service (Linux)
+    runs-on: ubuntu-latest
+    needs: build-release
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Download UI build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: config-ui-dist
+          path: rust-mcp/static/dist
+      
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust-mcp
+      
+      - name: Build release binary
+        run: cargo build --release --manifest-path rust-mcp/Cargo.toml
+      
+      - name: Install binary and service files
+        run: |
+          echo "=== Installing binary ==="
+          sudo cp rust-mcp/target/release/rust-mcp /usr/bin/rust-mcp
+          sudo chmod +x /usr/bin/rust-mcp
+          
+          echo "=== Installing service wrapper ==="
+          sudo cp rust-mcp/debian/rust-mcp-service /usr/bin/rust-mcp-service
+          sudo chmod +x /usr/bin/rust-mcp-service
+          
+          echo "=== Installing config files ==="
+          sudo mkdir -p /usr/share/rust-mcp
+          sudo cp rust-mcp/config-defaults/*.json /usr/share/rust-mcp/
+          
+          echo "=== Installing systemd service ==="
+          sudo cp rust-mcp/debian/rust-mcp.service /lib/systemd/system/rust-mcp.service
+          
+          echo "=== Verifying installation ==="
+          ls -la /usr/bin/rust-mcp*
+          ls -la /usr/share/rust-mcp/
+          cat /lib/systemd/system/rust-mcp.service
+      
+      - name: Test service wrapper creates config
+        run: |
+          echo "=== Running service wrapper to create config ==="
+          /usr/bin/rust-mcp-service --help || true
+          
+          echo "=== Checking config directory ==="
+          CONFIG_DIR="$HOME/.config/rust-mcp"
+          ls -la "$CONFIG_DIR/" || echo "Config dir not created"
+          
+          [ -f "$CONFIG_DIR/instances.json" ] && echo "PASS: instances.json created"
+          [ -f "$CONFIG_DIR/env" ] && echo "PASS: env file created"
+          [ -f "$CONFIG_DIR/tools.json" ] && echo "PASS: tools.json copied"
+          [ -f "$CONFIG_DIR/prompts.json" ] && echo "PASS: prompts.json copied"
+          [ -f "$CONFIG_DIR/server.json" ] && echo "PASS: server.json copied"
+      
+      - name: Test systemd service lifecycle
+        run: |
+          echo "=== Reloading systemd daemon ==="
+          sudo systemctl daemon-reload
+          
+          echo "=== Enabling service ==="
+          sudo systemctl enable rust-mcp
+          echo "PASS: Service enabled"
+          
+          echo "=== Starting service ==="
+          sudo systemctl start rust-mcp
+          
+          echo "=== Waiting for service to start ==="
+          sleep 3
+          
+          echo "=== Checking service status ==="
+          sudo systemctl status rust-mcp --no-pager || true
+          
+          if sudo systemctl is-active --quiet rust-mcp; then
+            echo "PASS: rust-mcp service is running"
+          else
+            echo "FAIL: rust-mcp service is not running"
+            echo "=== Service logs ==="
+            sudo journalctl -u rust-mcp --no-pager -n 100
+            exit 1
+          fi
+      
+      - name: Test HTTP endpoints
+        run: |
+          echo "=== Testing HTTP health endpoint ==="
+          for i in $(seq 1 15); do
+            if curl -s http://127.0.0.1:8787/health > /dev/null 2>&1; then
+              echo "PASS: HTTP health endpoint responding"
+              curl -s http://127.0.0.1:8787/health | jq . || cat
+              break
+            fi
+            echo "Waiting for HTTP endpoint... ($i/15)"
+            sleep 2
+          done
+          
+          # Verify health endpoint responded
+          if ! curl -s http://127.0.0.1:8787/health > /dev/null 2>&1; then
+            echo "FAIL: HTTP health endpoint not responding"
+            sudo journalctl -u rust-mcp --no-pager -n 50
+            exit 1
+          fi
+          
+          echo ""
+          echo "=== Testing MCP initialize endpoint ==="
+          MCP_RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci-test","version":"1.0"}}}')
+          
+          echo "MCP Response:"
+          echo "$MCP_RESPONSE" | jq . || echo "$MCP_RESPONSE"
+          
+          if echo "$MCP_RESPONSE" | grep -q "serverInfo"; then
+            echo "PASS: MCP initialize endpoint working"
+          else
+            echo "FAIL: MCP initialize endpoint not working correctly"
+            exit 1
+          fi
+          
+          echo ""
+          echo "=== Testing tools/list endpoint ==="
+          TOOLS_RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}')
+          
+          echo "Tools Response:"
+          echo "$TOOLS_RESPONSE" | jq . || echo "$TOOLS_RESPONSE"
+      
+      - name: Test service restart
+        run: |
+          echo "=== Restarting service ==="
+          sudo systemctl restart rust-mcp
+          sleep 3
+          
+          if sudo systemctl is-active --quiet rust-mcp; then
+            echo "PASS: Service restarted successfully"
+          else
+            echo "FAIL: Service failed to restart"
+            sudo journalctl -u rust-mcp --no-pager -n 50
+            exit 1
+          fi
+          
+          # Verify endpoint still works after restart
+          if curl -s http://127.0.0.1:8787/health > /dev/null 2>&1; then
+            echo "PASS: Health endpoint responding after restart"
+          else
+            echo "FAIL: Health endpoint not responding after restart"
+            exit 1
+          fi
+      
+      - name: Test service stop
+        run: |
+          echo "=== Stopping service ==="
+          sudo systemctl stop rust-mcp
+          sleep 2
+          
+          if ! sudo systemctl is-active --quiet rust-mcp; then
+            echo "PASS: Service stopped cleanly"
+          else
+            echo "FAIL: Service did not stop"
+            exit 1
+          fi
+          
+          echo "=== Disabling service ==="
+          sudo systemctl disable rust-mcp
+          echo "PASS: Service disabled"
+      
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Full service logs ==="
+          sudo journalctl -u rust-mcp --no-pager -n 200
+          echo ""
+          echo "=== System status ==="
+          sudo systemctl status rust-mcp --no-pager || true
+
+  test-macos-service:
+    name: Test macOS Service
+    runs-on: macos-latest
+    needs: build-ui
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Download UI build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: config-ui-dist
+          path: rust-mcp/static/dist
+      
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust-mcp
+      
+      - name: Build release binary
+        run: cargo build --release --manifest-path rust-mcp/Cargo.toml
+      
+      - name: Setup test environment
+        run: |
+          echo "=== Setting up test environment ==="
+          mkdir -p "$HOME/.config/odoo-rust-mcp"
+          
+          # Create test instances.json
+          cat > "$HOME/.config/odoo-rust-mcp/instances.json" << 'EOF'
+          {
+            "test": {
+              "url": "http://localhost:8069",
+              "db": "testdb",
+              "apiKey": "test_key_12345"
+            }
+          }
+          EOF
+          
+          # Create test env file
+          cat > "$HOME/.config/odoo-rust-mcp/env" << EOF
+          ODOO_INSTANCES_JSON=$HOME/.config/odoo-rust-mcp/instances.json
+          MCP_TOOLS_JSON=$PWD/rust-mcp/config-defaults/tools.json
+          MCP_PROMPTS_JSON=$PWD/rust-mcp/config-defaults/prompts.json
+          MCP_SERVER_JSON=$PWD/rust-mcp/config-defaults/server.json
+          EOF
+          
+          echo "=== Config files created ==="
+          ls -la "$HOME/.config/odoo-rust-mcp/"
+      
+      - name: Test binary directly
+        run: |
+          echo "=== Testing binary help ==="
+          ./rust-mcp/target/release/rust-mcp --help
+          
+          echo ""
+          echo "=== Starting binary in background ==="
+          MCP_TOOLS_JSON="$PWD/rust-mcp/config-defaults/tools.json" \
+          MCP_PROMPTS_JSON="$PWD/rust-mcp/config-defaults/prompts.json" \
+          MCP_SERVER_JSON="$PWD/rust-mcp/config-defaults/server.json" \
+          ODOO_INSTANCES_JSON="$HOME/.config/odoo-rust-mcp/instances.json" \
+          ./rust-mcp/target/release/rust-mcp --transport http --listen 127.0.0.1:8787 &
+          
+          BINARY_PID=$!
+          echo "Started with PID: $BINARY_PID"
+          
+          echo "=== Waiting for service to start ==="
+          sleep 5
+          
+          echo "=== Testing HTTP endpoint ==="
+          for i in $(seq 1 15); do
+            if curl -s http://127.0.0.1:8787/health > /dev/null 2>&1; then
+              echo "PASS: HTTP health endpoint responding"
+              curl -s http://127.0.0.1:8787/health
+              break
+            fi
+            echo "Waiting for HTTP endpoint... ($i/15)"
+            sleep 2
+          done
+          
+          echo ""
+          echo "=== Testing MCP endpoint ==="
+          MCP_RESPONSE=$(curl -s -X POST http://127.0.0.1:8787/mcp \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"macos-test","version":"1.0"}}}')
+          
+          echo "MCP Response:"
+          echo "$MCP_RESPONSE"
+          
+          if echo "$MCP_RESPONSE" | grep -q "serverInfo"; then
+            echo "PASS: MCP initialize endpoint working"
+          else
+            echo "FAIL: MCP initialize endpoint not working"
+            kill $BINARY_PID 2>/dev/null || true
+            exit 1
+          fi
+          
+          echo ""
+          echo "=== Stopping binary ==="
+          kill $BINARY_PID 2>/dev/null || true
+          sleep 2
+          
+          if ! kill -0 $BINARY_PID 2>/dev/null; then
+            echo "PASS: Binary stopped cleanly"
+          else
+            echo "WARN: Binary may still be running, force killing"
+            kill -9 $BINARY_PID 2>/dev/null || true
+          fi
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          pkill -f "rust-mcp.*--transport.*http" 2>/dev/null || true
+          rm -rf "$HOME/.config/odoo-rust-mcp" 2>/dev/null || true
