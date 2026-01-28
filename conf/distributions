@@ -1,0 +1,7 @@
+Origin: Odoo Rust MCP
+Label: odoo-rust-mcp
+Codename: stable
+Architectures: amd64 arm64
+Components: main
+Description: APT repository for Odoo Rust MCP Server
+SignWith: yes

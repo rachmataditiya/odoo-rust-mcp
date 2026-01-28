@@ -1,0 +1,20 @@
+Package: rust-mcp
+Version: 0.3.30-1
+Architecture: amd64
+Maintainer: Rachmat Aditiya <radit@arkana.co.id>
+Installed-Size: 9187
+Depends: libc6 (>= 2.34), libssl3t64 (>= 3.0.0)
+Priority: optional
+Section: utils
+Filename: pool/main/r/rust-mcp/rust-mcp_0.3.30-1_amd64.deb
+Size: 2792028
+SHA256: fbd7c065984da7377b313cb46b862ff7a47f7cd9851f14b53b02e1be35cd8155
+SHA1: 1af8815d0d500f8ec66bc19ddfae8d61e906bdef
+MD5sum: 540f89709943ae4983871addc03d89c1
+Description: Model Context Protocol server for Odoo integration
+ Odoo MCP Server - Model Context Protocol server for Odoo integration.
+ Supports both modern JSON-2 API (Odoo 19+) and legacy JSON-RPC (Odoo 18 and
+ earlier).
+ Provides tools for CRUD operations, workflow actions, report generation, and
+ more.
+
