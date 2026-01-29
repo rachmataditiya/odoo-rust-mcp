@@ -37,7 +37,7 @@ uuid = { version = "1.19.0", features = ["v4"] }
 async-stream = "0.3"
 wiremock = "0.6"
 axum-test = "18"
-mockall = "0.13"
+mockall = "0.14"
 tempfile = "3"
 
 [package.metadata.deb]
