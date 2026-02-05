@@ -20,7 +20,7 @@ mcp_rust_sdk = "0.1.1"
 notify = "8"
 rand = "0.9"
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
-schemars = { version = "0.8", features = ["derive"] }
+schemars = { version = "1.2", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
