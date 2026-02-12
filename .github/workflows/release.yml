@@ -574,13 +574,13 @@ jobs:
           brew untap rachmataditiya/odoo-rust-mcp 2>/dev/null || true
           brew tap rachmataditiya/odoo-rust-mcp
           brew install rust-mcp
-          chmod +x "$(brew --prefix)/bin/rust-mcp-service" 2>/dev/null || true
 
       - name: Verify installation
         run: |
           echo "=== Verifying binary installation ==="
           command -v rust-mcp && echo "PASS: rust-mcp installed"
           command -v rust-mcp-service && echo "PASS: rust-mcp-service installed"
+          [ -x "$(brew --prefix)/bin/rust-mcp-service" ] && echo "PASS: rust-mcp-service is executable"
           rust-mcp --help
           
           echo "=== Verifying config files ==="

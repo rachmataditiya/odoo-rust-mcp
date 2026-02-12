@@ -1,7 +1,7 @@
 class RustMcp < Formula
   desc "Odoo MCP Server - Model Context Protocol server for Odoo integration"
   homepage "https://github.com/rachmataditiya/odoo-rust-mcp"
-  version "0.3.30"
+  version "0.3.31"
   license "AGPL-3.0-only"
 
   on_macos do
@@ -185,6 +185,11 @@ MIGRATEEOF
     keep_alive true
     log_path var/"log/rust-mcp.log"
     error_log_path var/"log/rust-mcp.log"
+  end
+
+  def post_install
+    wrapper = bin/"rust-mcp-service"
+    wrapper.chmod 0755 if wrapper.exist?
   end
 
   def caveats
