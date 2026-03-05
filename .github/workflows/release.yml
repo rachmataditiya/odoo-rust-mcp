@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download UI build artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: config-ui-dist
           path: rust-mcp/static/dist
@@ -234,7 +234,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download UI build artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: config-ui-dist
           path: rust-mcp/static/dist
@@ -277,7 +277,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download binary artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: rust-mcp-*
           path: release-assets
@@ -351,7 +351,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download binary artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: rust-mcp-*
           path: release-assets
@@ -492,7 +492,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download deb artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: rust-mcp-*.deb
           path: debs
