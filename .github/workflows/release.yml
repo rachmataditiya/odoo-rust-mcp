@@ -44,7 +44,7 @@ jobs:
         run: npm run build
 
       - name: Upload UI build artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: config-ui-dist
           path: rust-mcp/static/dist
@@ -137,7 +137,7 @@ jobs:
           Compress-Archive -Path release/* -DestinationPath "${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
           path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive }}
@@ -209,7 +209,7 @@ jobs:
           output-file: ./sbom-docker.spdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: sbom-docker
@@ -256,7 +256,7 @@ jobs:
           cargo deb --target ${{ matrix.target }} --no-build
 
       - name: Upload deb artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: rust-mcp-${{ matrix.arch }}.deb
           path: rust-mcp/target/${{ matrix.target }}/debian/*.deb
