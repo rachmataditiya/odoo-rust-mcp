@@ -31,7 +31,7 @@ impl ConfigWatcher {
     ) -> NotifyResult<()> {
         let mut watcher: RecommendedWatcher =
             notify::recommended_watcher(move |res: NotifyResult<Event>| match res {
-                Ok(event) => {
+                Ok(event) if !event.kind.is_access() => {
                     for path in event.paths {
                         if let Some(filename) = path.file_name()
                             && let Some(name) = filename.to_str()
@@ -42,6 +42,8 @@ impl ConfigWatcher {
                         }
                     }
                 }
+                // Config readers must not produce change notifications.
+                Ok(_) => {}
                 Err(e) => error!("Watcher error: {}", e),
             })?;
 

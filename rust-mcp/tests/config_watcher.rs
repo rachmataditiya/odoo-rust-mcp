@@ -5,6 +5,54 @@ mod tests {
     use std::path::PathBuf;
     use tempfile::TempDir;
 
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_config_watcher_ignores_reads_and_notifies_on_writes() {
+        use rust_mcp::config_manager::ConfigWatcher;
+        use std::time::Duration;
+        use tokio::time::timeout;
+
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("tools.json");
+        fs::write(&path, r#"{"tools": []}"#).unwrap();
+        let watcher = ConfigWatcher::new(dir.path().to_path_buf()).unwrap();
+        let mut changes = watcher.subscribe();
+
+        // new() starts a background thread. Wait for a real notification so the
+        // read check cannot pass merely because the watcher is not ready yet.
+        timeout(Duration::from_secs(5), async {
+            loop {
+                fs::write(&path, r#"{"tools": []}"#).unwrap();
+                if let Ok(event) = timeout(Duration::from_millis(100), changes.recv()).await {
+                    assert_eq!(event.unwrap(), "tools.json");
+                    break;
+                }
+            }
+        })
+        .await
+        .expect("watcher did not start");
+        while let Ok(event) = timeout(Duration::from_millis(100), changes.recv()).await {
+            event.unwrap();
+        }
+
+        fs::read(&path).unwrap();
+        assert!(
+            timeout(Duration::from_millis(300), changes.recv())
+                .await
+                .is_err(),
+            "reading config was reported as a change"
+        );
+
+        fs::write(&path, r#"{"tools": [], "updated": true}"#).unwrap();
+        assert_eq!(
+            timeout(Duration::from_secs(5), changes.recv())
+                .await
+                .expect("write was not reported")
+                .unwrap(),
+            "tools.json"
+        );
+    }
+
     #[test]
     fn test_config_watcher_creation() {
         let temp_dir = TempDir::new().unwrap();
