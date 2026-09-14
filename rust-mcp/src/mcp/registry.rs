@@ -158,21 +158,25 @@ impl Registry {
         watch_dirs.sort();
         watch_dirs.dedup();
 
-        let mut watcher = match notify::recommended_watcher(move |res| match res {
-            Ok(event) => {
-                debug!(?event, "config fs event");
-                let _ = reload_tx.send(());
-            }
-            Err(err) => {
-                warn!(error = %err, "config watcher error");
-            }
-        }) {
-            Ok(w) => w,
-            Err(e) => {
-                warn!(error = %e, "failed to create config watcher; auto-reload disabled");
-                return;
-            }
-        };
+        let mut watcher =
+            match notify::recommended_watcher(move |res: notify::Result<notify::Event>| match res {
+                Ok(event) if !event.kind.is_access() => {
+                    debug!(?event, "config fs event");
+                    let _ = reload_tx.send(());
+                }
+                // Reading config during reload emits access events on Linux. Reloading
+                // on those events would keep every watcher of this directory busy.
+                Ok(_) => {}
+                Err(err) => {
+                    warn!(error = %err, "config watcher error");
+                }
+            }) {
+                Ok(w) => w,
+                Err(e) => {
+                    warn!(error = %e, "failed to create config watcher; auto-reload disabled");
+                    return;
+                }
+            };
 
         for dir in watch_dirs {
             if let Err(e) = watcher.watch(&dir, RecursiveMode::NonRecursive) {
@@ -390,6 +394,87 @@ fn validate_cursor_schema(schema: &Value) -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::time::Duration;
+    use tempfile::TempDir;
+
+    async fn watched_registry(dir: &Path) -> Arc<Registry> {
+        let registry = Arc::new(Registry {
+            tools_path: dir.join("tools.json"),
+            prompts_path: dir.join("prompts.json"),
+            server_path: dir.join("server.json"),
+            state: RwLock::new(RegistryState::empty()),
+            watchers: Mutex::new(None),
+        });
+        registry.initial_load().await.unwrap();
+        registry.start_watchers();
+        registry
+    }
+
+    async fn wait_for_server_name(registry: &Registry, expected: &str) {
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while registry.server_name().await != expected {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .expect("config change was not reloaded");
+    }
+
+    #[tokio::test]
+    async fn test_watcher_reloads_writes_and_atomic_replacements() {
+        let dir = TempDir::new().unwrap();
+        let registry = watched_registry(dir.path()).await;
+        let path = dir.path().join("server.json");
+        std::fs::write(&path, r#"{"serverName":"edited","instructions":"test"}"#).unwrap();
+        wait_for_server_name(&registry, "edited").await;
+
+        let replacement = dir.path().join("server.json.tmp");
+        std::fs::write(
+            &replacement,
+            r#"{"serverName":"replaced","instructions":"test"}"#,
+        )
+        .unwrap();
+        std::fs::rename(replacement, path).unwrap();
+        wait_for_server_name(&registry, "replaced").await;
+    }
+
+    // Linux inotify reports opening a file, including the registry's own reads.
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_watcher_does_not_reload_after_reading_config() {
+        let dir = TempDir::new().unwrap();
+        let registry = watched_registry(dir.path()).await;
+        let tools_path = registry.tools_path.clone();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let mut observer =
+            notify::recommended_watcher(move |result: notify::Result<notify::Event>| {
+                if let Ok(event) = result
+                    && matches!(
+                        event.kind,
+                        notify::EventKind::Access(notify::event::AccessKind::Open(_))
+                    )
+                    && event.paths.contains(&tools_path)
+                {
+                    let _ = tx.send(());
+                }
+            })
+            .unwrap();
+        observer
+            .watch(dir.path(), RecursiveMode::NonRecursive)
+            .unwrap();
+
+        std::fs::read(&registry.tools_path).unwrap();
+        tokio::time::timeout(Duration::from_secs(5), rx.recv())
+            .await
+            .expect("observer did not see the initial read")
+            .expect("observer closed");
+        assert!(
+            tokio::time::timeout(Duration::from_secs(1), rx.recv())
+                .await
+                .is_err(),
+            "reading config triggered another reload"
+        );
+    }
 
     #[test]
     fn test_validate_cursor_schema_valid() {
