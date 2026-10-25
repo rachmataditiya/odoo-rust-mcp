@@ -192,7 +192,7 @@ impl OdooLegacyClient {
         // Authenticate via common service with Odoo 18 /web/session/authenticate fallback
         let args = json!([self.db, self.username, self.password, {}]);
         let result = match self.jsonrpc_call("common", "authenticate", args).await {
-            Ok(res) if res.as_i64().is_some() && res.as_i64().unwrap() > 0 => res,
+            Ok(res) if res.as_i64().unwrap_or(0) > 0 => res,
             _ => self.web_session_authenticate().await?,
         };
 

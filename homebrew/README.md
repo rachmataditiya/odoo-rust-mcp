@@ -10,6 +10,7 @@ The actual Homebrew tap is hosted at: https://github.com/rachmataditiya/homebrew
 
 ```bash
 brew tap rachmataditiya/odoo-rust-mcp
+brew trust rachmataditiya/odoo-rust-mcp  # If prompted on Homebrew 4.4+
 brew install rust-mcp
 ```
 

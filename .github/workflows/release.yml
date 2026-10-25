@@ -573,6 +573,7 @@ jobs:
         run: |
           brew untap rachmataditiya/odoo-rust-mcp 2>/dev/null || true
           brew tap rachmataditiya/odoo-rust-mcp
+          brew trust rachmataditiya/odoo-rust-mcp 2>/dev/null || true
           brew install rust-mcp
 
       - name: Verify installation

@@ -469,6 +469,7 @@ export MCP_AUTH_TOKEN=               # Bearer token (generate: openssl rand -hex
 ```bash
 # Install
 brew tap rachmataditiya/odoo-rust-mcp
+brew trust rachmataditiya/odoo-rust-mcp  # If prompted on Homebrew 4.4+
 brew install rust-mcp
 
 # Configure (edit with your Odoo credentials)
