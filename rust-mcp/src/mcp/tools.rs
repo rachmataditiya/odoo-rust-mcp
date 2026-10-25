@@ -141,10 +141,10 @@ pub async fn execute_op(
     op: &OpSpec,
     args: Value,
 ) -> Result<Value, OdooError> {
-    if is_mutating_op(&op.op_type) {
-        if let Ok(instance) = req_str(&args, op, "instance") {
-            pool.check_write_allowed(&instance)?;
-        }
+    if is_mutating_op(&op.op_type)
+        && let Ok(instance) = req_str(&args, op, "instance")
+    {
+        pool.check_write_allowed(&instance)?;
     }
     match op.op_type.as_str() {
         "search" => op_search(pool, op, args).await,

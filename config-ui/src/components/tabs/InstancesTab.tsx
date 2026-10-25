@@ -241,6 +241,7 @@ export function InstancesTab() {
           setShowForm(false);
           setEditingName(null);
         }}
+        maxWidth="max-w-2xl sm:max-w-3xl"
         title={editingName ? `Edit "${editingName}"` : 'New Odoo Instance'}
         description="Enter connection and authentication credentials for this instance."
       >

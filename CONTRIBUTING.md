@@ -353,6 +353,6 @@ Contributors don't need to handle releases; maintainers will manage this process
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project (AGPL-3.0).
+By contributing, you agree that your contributions will be licensed under the same license as the project (MIT).
 
 Thank you for contributing to odoo-rust-mcp! 🚗

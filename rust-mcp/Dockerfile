@@ -85,7 +85,7 @@ FROM debian:bookworm-slim
 LABEL org.opencontainers.image.title="Odoo Rust MCP Server"
 LABEL org.opencontainers.image.description="Model Context Protocol server for Odoo integration"
 LABEL org.opencontainers.image.source="https://github.com/rachmataditiya/odoo-rust-mcp"
-LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
+LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.vendor="Rachmat Aditiya"
 
 # Install runtime dependencies

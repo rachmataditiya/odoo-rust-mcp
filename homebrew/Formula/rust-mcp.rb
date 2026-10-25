@@ -2,7 +2,7 @@ class RustMcp < Formula
   desc "Odoo MCP Server - Model Context Protocol server for Odoo integration"
   homepage "https://github.com/rachmataditiya/odoo-rust-mcp"
   version "0.3.31"
-  license "AGPL-3.0-only"
+  license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?

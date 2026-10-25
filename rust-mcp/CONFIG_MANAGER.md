@@ -474,7 +474,7 @@ jq . ~/.config/odoo-rust-mcp/instances.json
 
 ## 📝 License
 
-Same as main project (AGPL-3.0-only)
+Same as main project (MIT)
 
 ## 🤝 Contributing
 

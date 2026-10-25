@@ -9,7 +9,7 @@
       "url": "https://github.com/rachmataditiya/odoo-rust-mcp"
     },
     "license": {
-      "name": "AGPL-3.0-only"
+      "name": "MIT"
     }
   },
   "servers": [

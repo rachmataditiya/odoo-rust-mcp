@@ -4,7 +4,7 @@
 [![Release](https://github.com/rachmataditiya/odoo-rust-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/rachmataditiya/odoo-rust-mcp/actions/workflows/release.yml)
 [![codecov](https://codecov.io/gh/rachmataditiya/odoo-rust-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/rachmataditiya/odoo-rust-mcp)
 [![GitHub release](https://img.shields.io/github/v/release/rachmataditiya/odoo-rust-mcp)](https://github.com/rachmataditiya/odoo-rust-mcp/releases)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Homebrew](https://img.shields.io/badge/homebrew-available-orange)](https://rachmataditiya.github.io/homebrew-odoo-rust-mcp/)
 [![Debian/Ubuntu](https://img.shields.io/badge/apt-available-blue)](https://rachmataditiya.github.io/odoo-rust-mcp/)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fodoo--rust--mcp-2496ED?logo=docker&logoColor=white)](https://github.com/rachmataditiya/odoo-rust-mcp/pkgs/container/odoo-rust-mcp)

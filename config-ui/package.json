@@ -2,6 +2,7 @@
   "name": "odoo-rust-mcp-config-ui",
   "private": true,
   "version": "0.3.31",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "jsoneditor": "^10.4.2",
