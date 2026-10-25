@@ -543,6 +543,43 @@ This means you can use `rust-mcp` directly without the shell wrapper `rust-mcp-s
 
 For full Homebrew documentation, see: https://rachmataditiya.github.io/homebrew-odoo-rust-mcp/
 
+#### Agent Skills & Intelligence (Claude Code & Antigravity CLI)
+
+Teach Claude Code, Antigravity CLI (AGY), or Cursor to act as an autonomous Odoo ERP expert with domain knowledge, safe multi-instance protocols, Polish notation domain guides, and standard workflow runbooks:
+
+To install the agent skill and register the MCP server automatically:
+
+```bash
+./scripts/install-agent-skills.sh
+```
+
+Or configure manually:
+
+**Claude Code (`~/.claude.json`):**
+```json
+{
+  "mcpServers": {
+    "odoo": {
+      "type": "http",
+      "url": "http://127.0.0.1:8787/mcp"
+    }
+  }
+}
+```
+
+**Antigravity CLI (`~/.gemini/config/mcp_config.json`):**
+```json
+{
+  "mcpServers": {
+    "odoo": {
+      "url": "http://127.0.0.1:8787/mcp"
+    }
+  }
+}
+```
+
+Skill documentation and runbooks are located at `skills/odoo-mcp/SKILL.md`.
+
 #### Option 2: APT (Debian/Ubuntu)
 
 ```bash
