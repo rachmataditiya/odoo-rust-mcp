@@ -1,22 +1,46 @@
 import React from 'react';
 
-interface CardProps {
+export interface CardProps {
   children: React.ReactNode;
-  title?: string;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  aside?: React.ReactNode;
+  divided?: boolean;
   className?: string;
+  bodyClassName?: string;
 }
 
-export function Card({ children, title, description, className = '' }: CardProps) {
+export function Card({
+  children,
+  title,
+  description,
+  aside,
+  divided = false,
+  className = '',
+  bodyClassName = '',
+}: CardProps) {
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}>
-      {(title || description) && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
-          {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
-        </div>
+    <section
+      className={`overflow-hidden rounded-xl border border-line bg-surface shadow-sm transition-all ${className}`}
+    >
+      {(title || description || aside) && (
+        <header className="flex items-center justify-between gap-3 border-b border-line bg-surface-2/40 px-5 py-3.5">
+          <div className="min-w-0">
+            {title && (
+              <h2 className="text-[14px] font-semibold text-fg tracking-tight">
+                {title}
+              </h2>
+            )}
+            {description && (
+              <p className="mt-0.5 text-[12px] text-muted">{description}</p>
+            )}
+          </div>
+          {aside && <div className="shrink-0">{aside}</div>}
+        </header>
       )}
-      <div className="p-6">{children}</div>
-    </div>
+      <div className={divided ? `divide-y divide-line ${bodyClassName}` : `p-5 ${bodyClassName}`}>
+        {children}
+      </div>
+    </section>
   );
 }

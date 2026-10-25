@@ -1,5 +1,4 @@
-
-import { CheckCircle, AlertCircle, AlertTriangle, Loader2, X } from 'lucide-react';
+import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucide-react';
 import type { StatusMessage as StatusMessageType } from '../types';
 
 interface StatusMessageProps {
@@ -11,59 +10,66 @@ export function StatusMessage({ status, onDismiss }: StatusMessageProps) {
   const variants = {
     loading: {
       icon: Loader2,
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      textColor: 'text-blue-900',
-      iconColor: 'text-blue-600',
-      dismissColor: 'text-blue-600 hover:text-blue-800',
+      bgColor: 'bg-primary/10',
+      borderColor: 'border-primary/20',
+      textColor: 'text-fg',
+      iconColor: 'text-primary',
     },
     success: {
       icon: CheckCircle,
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      textColor: 'text-green-900',
-      iconColor: 'text-green-600',
-      dismissColor: 'text-green-600 hover:text-green-800',
+      bgColor: 'bg-ok/10',
+      borderColor: 'border-ok/25',
+      textColor: 'text-fg',
+      iconColor: 'text-ok',
     },
     warning: {
       icon: AlertTriangle,
-      bgColor: 'bg-yellow-50',
-      borderColor: 'border-yellow-200',
-      textColor: 'text-yellow-900',
-      iconColor: 'text-yellow-600',
-      dismissColor: 'text-yellow-600 hover:text-yellow-800',
+      bgColor: 'bg-warn/10',
+      borderColor: 'border-warn/25',
+      textColor: 'text-fg',
+      iconColor: 'text-warn',
     },
     error: {
       icon: AlertCircle,
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      textColor: 'text-red-900',
-      iconColor: 'text-red-600',
-      dismissColor: 'text-red-600 hover:text-red-800',
+      bgColor: 'bg-down/10',
+      borderColor: 'border-down/25',
+      textColor: 'text-fg',
+      iconColor: 'text-down',
+    },
+    info: {
+      icon: Info,
+      bgColor: 'bg-primary/10',
+      borderColor: 'border-primary/20',
+      textColor: 'text-fg',
+      iconColor: 'text-primary',
     },
   };
 
-  const config = variants[status.type];
+  const config = variants[status.type] || variants.info;
   const Icon = config.icon;
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-lg border ${config.bgColor} ${config.borderColor} ${config.textColor} animate-in slide-in-from-top-2 duration-300`}
+      className={`flex items-start gap-3 p-3.5 rounded-xl border ${config.bgColor} ${config.borderColor} ${config.textColor} animate-in slide-in-from-top-2 duration-200 shadow-sm`}
     >
       <Icon
-        className={`${config.iconColor} flex-shrink-0 ${status.type === 'loading' ? 'animate-spin' : ''}`}
-        size={20}
+        className={`${config.iconColor} shrink-0 mt-0.5 ${
+          status.type === 'loading' ? 'animate-spin' : ''
+        }`}
+        size={16}
       />
-      <p className="flex-1 text-sm font-medium">{status.message}</p>
-      {(status.type === 'error' || status.type === 'warning') && onDismiss && (
-        <button
-          onClick={onDismiss}
-          className={`flex-shrink-0 ${config.dismissColor} transition-colors`}
-          aria-label="Dismiss"
-        >
-          <X size={18} />
-        </button>
-      )}
+      <p className="flex-1 text-[13px] font-medium leading-snug">{status.message}</p>
+      {(status.type === 'error' || status.type === 'warning' || status.type === 'info') &&
+        onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="shrink-0 text-muted hover:text-fg transition-colors"
+            aria-label="Dismiss"
+          >
+            <X size={15} />
+          </button>
+        )}
     </div>
   );
 }

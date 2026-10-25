@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, Database, Key, User } from 'lucide-react';
+import { Plus, Edit2, Trash2, Database, Key, User, ExternalLink, Globe, Server, Lock } from 'lucide-react';
 import { useConfig } from '../../hooks/useConfig';
-import { Card } from '../Card';
 import { Button } from '../Button';
 import { StatusMessage } from '../StatusMessage';
-import { InstanceForm } from '../InstanceForm';
+import { InstanceForm, type InstanceData } from '../InstanceForm';
+import { Modal } from '../Modal';
+import { PageHeader } from '../PageHeader';
 import type { InstanceConfig } from '../../types';
 
 export function InstancesTab() {
@@ -19,7 +20,7 @@ export function InstancesTab() {
 
   const loadInstances = async () => {
     try {
-      const data = await load() as InstanceConfig;
+      const data = (await load()) as InstanceConfig;
       setConfig(data);
     } catch (error) {
       console.error('Failed to load instances:', error);
@@ -51,7 +52,7 @@ export function InstancesTab() {
     }
   };
 
-  const handleSaveInstance = async (name: string, data: any) => {
+  const handleSaveInstance = async (name: string, data: InstanceData) => {
     try {
       const updatedConfig = { ...config };
 
@@ -75,22 +76,20 @@ export function InstancesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">Odoo Instances</h2>
-          <p className="mt-2 text-gray-600">
-            Configure your Odoo instance connections. Changes are applied immediately with hot reload.
-          </p>
-        </div>
+      <PageHeader
+        title="Odoo Instances"
+        description="Configure target Odoo environments. Changes are hot-reloaded automatically into active MCP clients."
+      >
         <Button
           onClick={handleAdd}
-          icon={<Plus size={18} />}
+          icon={<Plus size={15} />}
           variant="primary"
+          size="md"
           disabled={loading}
         >
           Add Instance
         </Button>
-      </div>
+      </PageHeader>
 
       {status && (
         <StatusMessage
@@ -99,130 +98,152 @@ export function InstancesTab() {
         />
       )}
 
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Configured Instances ({instances.length})
-          </h3>
-          <Button
-            onClick={loadInstances}
-            loading={loading}
-            icon={<RefreshCw size={16} />}
-            variant="ghost"
-            size="sm"
-          >
-            Refresh
-          </Button>
-        </div>
-
-        {instances.length === 0 ? (
-          <div className="text-center py-16">
-            <Database className="mx-auto text-gray-400 mb-3" size={48} />
-            <p className="text-gray-500 mb-4">No instances configured</p>
-            <Button onClick={handleAdd} icon={<Plus size={16} />} variant="primary">
-              Add Your First Instance
+      {instances.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-line bg-surface/50 p-12 text-center">
+          <div className="mx-auto w-12 h-12 rounded-xl bg-surface-2 border border-line flex items-center justify-center text-muted mb-4 shadow-xs">
+            <Database size={22} />
+          </div>
+          <h3 className="text-[14px] font-semibold text-fg">No Instances Configured</h3>
+          <p className="mt-1 text-[13px] text-muted max-w-sm mx-auto">
+            Add an Odoo connection to enable querying models, reading records, and executing workflows.
+          </p>
+          <div className="mt-5">
+            <Button onClick={handleAdd} icon={<Plus size={15} />} variant="primary" size="md">
+              Add First Instance
             </Button>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    URL
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Database
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Auth Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Version
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {instances.map(([name, instance]) => {
-                  const authType = instance.apiKey ? 'API Key' : 'Username/Password';
-                  const authIcon = instance.apiKey ? Key : User;
-                  const AuthIcon = authIcon;
-
-                  return (
-                    <tr key={name} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <Database size={16} className="text-blue-600 flex-shrink-0" />
-                          <code className="font-mono text-sm font-medium text-gray-900">
-                            {name}
-                          </code>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <a
-                          href={instance.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline max-w-xs truncate block"
-                          title={instance.url}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {instances.map(([name, instance]) => (
+            <div
+              key={name}
+              className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm hover:border-line-strong transition-all flex flex-col"
+            >
+              {/* Card Header */}
+              <div className="flex items-center justify-between gap-3 border-b border-line bg-surface-2/40 px-4 py-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Database size={15} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[13px] font-semibold text-fg truncate">
+                        {name}
+                      </span>
+                      {instance.version && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-2 text-muted border border-line">
+                          v{instance.version}
+                        </span>
+                      )}
+                      {instance.readOnly && (
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/20"
+                          title="Read-only instance: mutating operations prohibited"
                         >
-                          {instance.url}
-                        </a>
-                      </td>
-                      <td className="px-4 py-4">
-                        <code className="text-sm text-gray-700 font-mono">
-                          {instance.db}
-                        </code>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1.5">
-                          <AuthIcon size={14} className="text-gray-500" />
-                          <span className="text-xs text-gray-600">{authType}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        {instance.version ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
-                            v{instance.version}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleEdit(name)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(name)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+                          <Lock size={10} />
+                          ReadOnly
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-      {showForm && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(name)}
+                    className="grid h-7 w-7 place-items-center rounded-md text-muted hover:text-fg hover:bg-surface-3 transition-colors"
+                    title="Edit instance"
+                    aria-label="Edit instance"
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(name)}
+                    className="grid h-7 w-7 place-items-center rounded-md text-muted hover:text-down hover:bg-down/10 transition-colors"
+                    title="Delete instance"
+                    aria-label="Delete instance"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between text-[13px]">
+                <div className="space-y-2.5">
+                  {/* Host URL */}
+                  <div className="flex items-center justify-between gap-2 text-muted">
+                    <div className="flex items-center gap-1.5 text-faint">
+                      <Globe size={13} />
+                      <span className="text-[12px]">URL</span>
+                    </div>
+                    <a
+                      href={instance.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[12px] text-fg hover:text-primary transition-colors flex items-center gap-1 truncate max-w-[65%]"
+                      title={instance.url}
+                    >
+                      <span className="truncate">{instance.url}</span>
+                      <ExternalLink size={10} className="shrink-0 opacity-60" />
+                    </a>
+                  </div>
+
+                  {/* Database Name */}
+                  <div className="flex items-center justify-between gap-2 text-muted">
+                    <div className="flex items-center gap-1.5 text-faint">
+                      <Server size={13} />
+                      <span className="text-[12px]">Database</span>
+                    </div>
+                    <span className="font-mono text-[12px] font-medium px-2 py-0.5 rounded-md bg-surface-2 text-fg border border-line truncate max-w-[65%]">
+                      {instance.db}
+                    </span>
+                  </div>
+
+                  {/* Auth Mode */}
+                  <div className="flex items-center justify-between gap-2 text-muted">
+                    <div className="flex items-center gap-1.5 text-faint">
+                      {instance.apiKey ? <Key size={13} /> : <User size={13} />}
+                      <span className="text-[12px]">Auth Mode</span>
+                    </div>
+                    {instance.apiKey ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                        <Key size={10} /> API Key (JSON-2)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-surface-2 text-muted border border-line">
+                        <User size={10} /> {instance.username || 'User/Pass (RPC)'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Resource Scheme URI hint */}
+                <div className="pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-muted">
+                  <span>MCP Resource URI</span>
+                  <code className="text-primary font-mono text-[11px]">
+                    odoo://{name}/models
+                  </code>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add / Edit Instance Modal */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingName(null);
+        }}
+        title={editingName ? `Edit "${editingName}"` : 'New Odoo Instance'}
+        description="Enter connection and authentication credentials for this instance."
+      >
         <InstanceForm
           instanceName={editingName}
           instanceData={editingName ? config[editingName] : null}
@@ -233,7 +254,7 @@ export function InstancesTab() {
             setEditingName(null);
           }}
         />
-      )}
+      </Modal>
     </div>
   );
 }

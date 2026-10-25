@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, RefreshCw, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText, Copy, Check } from 'lucide-react';
 import { useConfig } from '../../hooks/useConfig';
-import { Card } from '../Card';
 import { Button } from '../Button';
 import { StatusMessage } from '../StatusMessage';
 import { PromptForm } from '../PromptForm';
+import { Modal } from '../Modal';
+import { PageHeader } from '../PageHeader';
 import type { PromptConfig } from '../../types';
 
 export function PromptsTab() {
@@ -13,6 +14,7 @@ export function PromptsTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<PromptConfig | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [copiedName, setCopiedName] = useState<string | null>(null);
 
   useEffect(() => {
     loadPrompts();
@@ -20,7 +22,7 @@ export function PromptsTab() {
 
   const loadPrompts = async () => {
     try {
-      const data = await load() as PromptConfig[];
+      const data = (await load()) as PromptConfig[];
       setPrompts(data);
     } catch (error) {
       console.error('Failed to load prompts:', error);
@@ -60,7 +62,7 @@ export function PromptsTab() {
       if (editingIndex !== null) {
         updatedPrompts = prompts.map((p, i) => (i === editingIndex ? prompt : p));
       } else {
-        const exists = prompts.some(p => p.name === prompt.name);
+        const exists = prompts.some((p) => p.name === prompt.name);
         if (exists) {
           alert('A prompt with this name already exists. Please use a different name.');
           return;
@@ -78,29 +80,35 @@ export function PromptsTab() {
     }
   };
 
-  const truncateContent = (content: string, maxLength: number = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+  const copyPromptContent = async (name: string, content: string) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedName(name);
+    setTimeout(() => setCopiedName(null), 2000);
+  };
+
+  // Helper to extract {{var}} placeholders from prompt content
+  const extractPlaceholders = (content: string) => {
+    const matches = content.match(/\{\{([^}]+)\}\}/g);
+    if (!matches) return [];
+    return Array.from(new Set(matches.map((m) => m.replace(/[{}]/g, '').trim())));
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">System Prompts</h2>
-          <p className="mt-2 text-gray-600">
-            Configure AI prompts and system instructions for the MCP server.
-          </p>
-        </div>
+      <PageHeader
+        title="System Prompts"
+        description="Define reusable prompt templates exposed via the MCP prompts protocol."
+      >
         <Button
           onClick={handleAdd}
-          icon={<Plus size={18} />}
+          icon={<Plus size={15} />}
           variant="primary"
+          size="md"
           disabled={loading}
         >
           Add Prompt
         </Button>
-      </div>
+      </PageHeader>
 
       {status && (
         <StatusMessage
@@ -109,97 +117,123 @@ export function PromptsTab() {
         />
       )}
 
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Configured Prompts ({prompts.length})
-          </h3>
-          <Button
-            onClick={loadPrompts}
-            loading={loading}
-            icon={<RefreshCw size={16} />}
-            variant="ghost"
-            size="sm"
-          >
-            Refresh
-          </Button>
-        </div>
-
-        {prompts.length === 0 ? (
-          <div className="text-center py-16">
-            <FileText className="mx-auto text-gray-400 mb-3" size={48} />
-            <p className="text-gray-500 mb-4">No prompts configured</p>
-            <Button onClick={handleAdd} icon={<Plus size={16} />} variant="primary">
-              Add Your First Prompt
+      {prompts.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-line bg-surface/50 p-12 text-center">
+          <div className="mx-auto w-12 h-12 rounded-xl bg-surface-2 border border-line flex items-center justify-center text-muted mb-4 shadow-xs">
+            <FileText size={22} />
+          </div>
+          <h3 className="text-[14px] font-semibold text-fg">No Prompts Configured</h3>
+          <p className="mt-1 text-[13px] text-muted max-w-sm mx-auto">
+            Create AI prompts such as domain search helpers or model relationship inspectors.
+          </p>
+          <div className="mt-5">
+            <Button onClick={handleAdd} icon={<Plus size={15} />} variant="primary" size="md">
+              Add First Prompt
             </Button>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Content Preview
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {prompts.map((prompt, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <FileText size={16} className="text-blue-600 flex-shrink-0" />
-                        <code className="font-mono text-sm font-medium text-gray-900">
-                          {prompt.name}
-                        </code>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-sm text-gray-600 max-w-xs">
-                        {prompt.description || '-'}
-                      </p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-xs text-gray-500 font-mono max-w-md line-clamp-2">
-                        {truncateContent(prompt.content)}
-                      </p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(prompt, index)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(index)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {prompts.map((prompt, index) => {
+            const placeholders = extractPlaceholders(prompt.content);
+            const isCopied = copiedName === prompt.name;
 
-      {showForm && (
+            return (
+              <div
+                key={prompt.name}
+                className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm hover:border-line-strong transition-all"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between gap-3 border-b border-line bg-surface-2/40 px-5 py-3.5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <FileText size={15} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[13px] font-semibold text-fg truncate">
+                          {prompt.name}
+                        </span>
+                        {placeholders.length > 0 && (
+                          <div className="hidden sm:flex items-center gap-1">
+                            {placeholders.slice(0, 3).map((p) => (
+                              <span
+                                key={p}
+                                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
+                              >
+                                {`{{${p}}}`}
+                              </span>
+                            ))}
+                            {placeholders.length > 3 && (
+                              <span className="text-[10px] text-muted font-mono">
+                                +{placeholders.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {prompt.description && (
+                        <p className="mt-0.5 text-[12px] text-muted truncate">
+                          {prompt.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => copyPromptContent(prompt.name, prompt.content)}
+                      className="grid h-7 w-7 place-items-center rounded-md text-muted hover:text-fg hover:bg-surface-3 transition-colors"
+                      title={isCopied ? 'Copied to clipboard' : 'Copy prompt template'}
+                      aria-label="Copy prompt template"
+                    >
+                      {isCopied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(prompt, index)}
+                      className="grid h-7 w-7 place-items-center rounded-md text-muted hover:text-fg hover:bg-surface-3 transition-colors"
+                      title="Edit prompt"
+                      aria-label="Edit prompt"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(index)}
+                      className="grid h-7 w-7 place-items-center rounded-md text-muted hover:text-down hover:bg-down/10 transition-colors"
+                      title="Delete prompt"
+                      aria-label="Delete prompt"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content Body */}
+                <div className="p-4 bg-surface-2/20">
+                  <pre className="font-mono text-[12px] text-fg/90 bg-surface rounded-lg p-3.5 border border-line whitespace-pre-wrap break-words leading-relaxed max-h-48 overflow-y-auto">
+                    {prompt.content}
+                  </pre>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add / Edit Prompt Modal */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingPrompt(null);
+          setEditingIndex(null);
+        }}
+        title={editingPrompt ? `Edit "${editingPrompt.name}"` : 'New System Prompt'}
+        description="Configure an MCP prompt template for client models."
+      >
         <PromptForm
           prompt={editingPrompt}
           onSave={handleSavePrompt}
@@ -209,7 +243,7 @@ export function PromptsTab() {
             setEditingIndex(null);
           }}
         />
-      )}
+      </Modal>
     </div>
   );
 }

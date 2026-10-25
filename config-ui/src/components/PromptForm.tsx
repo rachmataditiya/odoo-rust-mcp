@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { Button } from './Button';
+import { Field } from './Field';
+import { TextField } from './TextField';
 import type { PromptConfig } from '../types';
 
-interface PromptFormProps {
+export interface PromptFormProps {
   prompt: PromptConfig | null;
   onSave: (prompt: PromptConfig) => void;
   onCancel: () => void;
@@ -31,11 +32,11 @@ export function PromptForm({ prompt, onSave, onCancel }: PromptFormProps) {
     const newErrors: { name?: string; content?: string } = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Prompt identifier name is required';
     }
 
     if (!formData.content.trim()) {
-      newErrors.content = 'Content is required';
+      newErrors.content = 'Prompt template content is required';
     }
 
     setErrors(newErrors);
@@ -45,9 +46,7 @@ export function PromptForm({ prompt, onSave, onCancel }: PromptFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validate()) {
-      return;
-    }
+    if (!validate()) return;
 
     onSave({
       ...formData,
@@ -58,78 +57,76 @@ export function PromptForm({ prompt, onSave, onCancel }: PromptFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">
-            {prompt ? 'Edit Prompt' : 'Add New Prompt'}
-          </h3>
-          <button
-            onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X size={24} />
-          </button>
+    <form onSubmit={handleSubmit} className="divide-y divide-line">
+      {/* Prompt Name */}
+      <Field
+        label="Prompt Name"
+        help="Identifier used by MCP clients to reference this prompt."
+        htmlFor="prompt-name"
+      >
+        <div className="w-full sm:w-72">
+          <TextField
+            id="prompt-name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="e.g. odoo_common_models"
+            mono
+            disabled={!!prompt}
+          />
+          {errors.name && (
+            <p className="mt-1 text-[11px] text-down font-medium">{errors.name}</p>
+          )}
         </div>
+      </Field>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="e.g., odoo_common_models"
-              />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-            </div>
+      {/* Description */}
+      <Field
+        label="Description (Optional)"
+        help="Summary of the prompt intent and expected outputs."
+        htmlFor="prompt-desc"
+      >
+        <div className="w-full sm:w-72">
+          <TextField
+            id="prompt-desc"
+            value={formData.description || ''}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Brief description of this prompt"
+          />
+        </div>
+      </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <input
-                type="text"
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Brief description of the prompt's purpose"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Content <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                rows={16}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
-                  errors.content ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Enter the prompt content here..."
-              />
-              {errors.content && <p className="mt-1 text-sm text-red-600">{errors.content}</p>}
-            </div>
-          </div>
-
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              {prompt ? 'Update Prompt' : 'Add Prompt'}
-            </Button>
-          </div>
-        </form>
+      {/* Prompt Content */}
+      <div className="py-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <label htmlFor="prompt-content" className="block text-[13px] font-medium text-fg">
+            Prompt Template Content
+          </label>
+          <span className="text-[11px] text-muted">
+            Supports parameter placeholders like <code className="text-primary font-mono">{`{{model}}`}</code>
+          </span>
+        </div>
+        <textarea
+          id="prompt-content"
+          rows={7}
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          placeholder="Enter the prompt body or guidelines injected for the AI..."
+          className="w-full rounded-md border border-line bg-surface-2 p-3 text-[13px] text-fg transition-colors outline-none placeholder:text-faint hover:border-line-strong focus:border-primary focus:ring-1 focus:ring-primary font-mono leading-relaxed"
+        />
+        {errors.content && (
+          <p className="text-[11px] text-down font-medium">{errors.content}</p>
+        )}
       </div>
-    </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center justify-end gap-2.5 pt-4">
+        <Button type="button" onClick={onCancel} variant="plain" size="md">
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" size="md">
+          {prompt ? 'Update Prompt' : 'Create Prompt'}
+        </Button>
+      </div>
+    </form>
   );
 }

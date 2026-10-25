@@ -51,7 +51,7 @@ export function JsonEditor({ value, onChange, mode = 'code' }: JsonEditorProps) 
         if (JSON.stringify(currentJson) !== JSON.stringify(value)) {
           editorRef.current.update(value);
         }
-      } catch (error) {
+      } catch {
         editorRef.current.set(value);
       }
     }

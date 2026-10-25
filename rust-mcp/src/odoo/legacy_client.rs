@@ -189,9 +189,12 @@ impl OdooLegacyClient {
             }
         }
 
-        // Authenticate via common service
+        // Authenticate via common service with Odoo 18 /web/session/authenticate fallback
         let args = json!([self.db, self.username, self.password, {}]);
-        let result = self.jsonrpc_call("common", "authenticate", args).await?;
+        let result = match self.jsonrpc_call("common", "authenticate", args).await {
+            Ok(res) if res.as_i64().is_some() && res.as_i64().unwrap() > 0 => res,
+            _ => self.web_session_authenticate().await?,
+        };
 
         let uid = result.as_i64().ok_or_else(|| OdooError::Api {
             status: 401,
@@ -220,6 +223,45 @@ impl OdooLegacyClient {
         }
 
         Ok(uid)
+    }
+
+    /// Authenticate via Odoo 18+ /web/session/authenticate endpoint
+    async fn web_session_authenticate(&self) -> OdooResult<Value> {
+        let mut url = self.base_url.clone();
+        url.set_path("/web/session/authenticate");
+        let response = self
+            .http
+            .post(url)
+            .headers(self.headers())
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "method": "call",
+                "params": {
+                    "db": self.db,
+                    "login": self.username,
+                    "password": self.password
+                },
+                "id": 1
+            }))
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<Value>()
+            .await?;
+
+        let uid = response
+            .pointer("/result/uid")
+            .and_then(|v| v.as_i64())
+            .ok_or_else(|| OdooError::Api {
+                status: 401,
+                message: format!(
+                    "Authentication failed for user '{}'. Check username/password.",
+                    self.username
+                ),
+                body: None,
+            })?;
+
+        Ok(json!(uid))
     }
 
     /// Call execute_kw on the object service
@@ -637,6 +679,7 @@ mod tests {
             version: Some("18".to_string()),
             timeout_ms: Some(5000),
             max_retries: Some(2),
+            read_only: false,
             extra: HashMap::new(),
         }
     }
@@ -720,6 +763,7 @@ mod tests {
             version: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         let client = OdooLegacyClient::new(&cfg).unwrap();

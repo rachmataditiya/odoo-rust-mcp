@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('React Hooks', () => {
   describe('useAuth Hook Logic', () => {
@@ -123,12 +123,9 @@ describe('React Hooks', () => {
 
     it('should skip effect when dependencies unchanged', () => {
       const mockEffect = vi.fn();
-      const deps = ['value'];
+      const shouldRun = false;
       
-      // Would skip if deps are same
-      const shouldRun = true; // Simulate same deps
-      
-      if (shouldRun === false) {
+      if (shouldRun) {
         mockEffect();
       }
       
@@ -198,7 +195,7 @@ describe('React Hooks', () => {
     });
 
     it('should handle loading state', () => {
-      let state = { loading: false, data: null, error: null };
+      let state: { loading: boolean; data: any; error: any } = { loading: false, data: null, error: null };
       
       state = { ...state, loading: true };
       expect(state.loading).toBe(true);
@@ -208,7 +205,7 @@ describe('React Hooks', () => {
     });
 
     it('should handle error state', () => {
-      let state = { loading: false, data: null, error: null };
+      let state: { loading: boolean; data: any; error: any } = { loading: false, data: null, error: null };
       
       state = { ...state, error: 'Failed to load' };
       expect(state.error).toBe('Failed to load');

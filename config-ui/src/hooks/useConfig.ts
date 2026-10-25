@@ -98,7 +98,7 @@ export function useConfig(type: ConfigType) {
       }
 
       // Build success message with optional warning
-      let successMessage = `${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully. Hot reload applied.`;
+      const successMessage = `${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully. Hot reload applied.`;
       
       if (responseData.warning) {
         // Show warning alongside success

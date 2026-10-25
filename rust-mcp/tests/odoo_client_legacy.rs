@@ -20,6 +20,7 @@ fn create_legacy_config(url: &str) -> OdooInstanceConfig {
         version: Some("18".to_string()),
         timeout_ms: Some(5000),
         max_retries: Some(0), // No retries for faster tests
+        read_only: false,
         extra: HashMap::new(),
     }
 }
@@ -433,6 +434,7 @@ async fn test_legacy_network_error() {
         version: Some("18".to_string()),
         timeout_ms: Some(1000),
         max_retries: Some(0), // No retries to speed up test
+        read_only: false,
         extra: HashMap::new(),
     };
 

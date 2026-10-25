@@ -12,6 +12,48 @@ use crate::odoo::config::{OdooEnvConfig, load_odoo_env};
 use crate::odoo::types::OdooError;
 use crate::odoo::unified_client::OdooClient;
 
+const DEFAULT_MAX_REPORT_BYTES: usize = 10 * 1024 * 1024;
+const ABSOLUTE_MAX_REPORT_BYTES: usize = 50 * 1024 * 1024;
+
+fn max_report_bytes() -> Result<usize, OdooError> {
+    let value = std::env::var("ODOO_MAX_REPORT_BYTES")
+        .ok()
+        .map(|raw| raw.parse::<usize>())
+        .transpose()
+        .map_err(|_| OdooError::InvalidResponse("ODOO_MAX_REPORT_BYTES must be an integer".into()))?
+        .unwrap_or(DEFAULT_MAX_REPORT_BYTES);
+    if !(1..=ABSOLUTE_MAX_REPORT_BYTES).contains(&value) {
+        return Err(OdooError::InvalidResponse(format!(
+            "ODOO_MAX_REPORT_BYTES must be between 1 and {ABSOLUTE_MAX_REPORT_BYTES}"
+        )));
+    }
+    Ok(value)
+}
+
+fn enforce_report_size(size: usize, limit: usize) -> Result<(), OdooError> {
+    if size > limit {
+        return Err(OdooError::InvalidResponse(format!(
+            "Report response exceeds the configured {limit}-byte limit"
+        )));
+    }
+    Ok(())
+}
+
+pub fn is_mutating_op(op_type: &str) -> bool {
+    matches!(
+        op_type,
+        "create"
+            | "write"
+            | "unlink"
+            | "workflow_action"
+            | "execute"
+            | "database_cleanup"
+            | "deep_cleanup"
+            | "copy"
+            | "create_batch"
+    )
+}
+
 /// Shared state: parsed env + instantiated clients per instance.
 /// Supports both Odoo 19+ (JSON-2 API) and Odoo < 19 (JSON-RPC).
 #[derive(Clone)]
@@ -29,6 +71,14 @@ impl OdooClientPool {
             clients: Arc::new(Mutex::new(HashMap::new())),
             metadata_cache: MetadataCache::new(),
         })
+    }
+
+    pub fn from_config(env: OdooEnvConfig) -> Self {
+        Self {
+            env: Arc::new(env),
+            clients: Arc::new(Mutex::new(HashMap::new())),
+            metadata_cache: MetadataCache::new(),
+        }
     }
 
     pub async fn get(&self, instance: &str) -> anyhow::Result<OdooClient> {
@@ -59,6 +109,23 @@ impl OdooClientPool {
     pub fn instance_names(&self) -> Vec<String> {
         self.env.instances.keys().cloned().collect()
     }
+
+    pub fn is_read_only(&self, instance: &str) -> bool {
+        self.env
+            .instances
+            .get(instance)
+            .map(|cfg| cfg.read_only)
+            .unwrap_or(false)
+    }
+
+    pub fn check_write_allowed(&self, instance: &str) -> Result<(), OdooError> {
+        if self.is_read_only(instance) {
+            return Err(OdooError::InvalidResponse(format!(
+                "Instance '{instance}' is configured as read-only; mutating operations are prohibited"
+            )));
+        }
+        Ok(())
+    }
 }
 
 pub async fn call_tool(
@@ -74,6 +141,11 @@ pub async fn execute_op(
     op: &OpSpec,
     args: Value,
 ) -> Result<Value, OdooError> {
+    if is_mutating_op(&op.op_type) {
+        if let Ok(instance) = req_str(&args, op, "instance") {
+            pool.check_write_allowed(&instance)?;
+        }
+    }
     match op.op_type.as_str() {
         "search" => op_search(pool, op, args).await,
         "search_read" => op_search_read(pool, op, args).await,
@@ -288,6 +360,7 @@ async fn op_read(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Valu
 
 async fn op_create(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let values = req_value(&args, op, "values")?;
     let context = opt_value(&args, op, "context");
@@ -302,6 +375,7 @@ async fn op_create(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Va
 
 async fn op_write(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let ids = req_vec_i64(&args, op, "ids")?;
     let values = req_value(&args, op, "values")?;
@@ -319,6 +393,7 @@ async fn op_write(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Val
 
 async fn op_unlink(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let ids = req_vec_i64(&args, op, "ids")?;
     let context = opt_value(&args, op, "context");
@@ -357,6 +432,7 @@ async fn op_workflow_action(
     args: Value,
 ) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let ids = req_vec_i64(&args, op, "ids")?;
     let action = req_str(&args, op, "action")?;
@@ -375,6 +451,7 @@ async fn op_workflow_action(
 
 async fn op_execute(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let method = req_str(&args, op, "method")?;
     let args_val = ptr(&args, op, "args").cloned().unwrap_or(Value::Null);
@@ -447,6 +524,7 @@ async fn op_generate_report(
         .map_err(|e| OdooError::InvalidResponse(e.to_string()))?;
 
     let pdf_bytes = client.download_report_pdf(&report_name, &ids).await?;
+    enforce_report_size(pdf_bytes.len(), max_report_bytes()?)?;
     let pdf_base64 = base64::engine::general_purpose::STANDARD.encode(pdf_bytes);
     Ok(ok_text(json!({
         "pdf_base64": pdf_base64,
@@ -528,6 +606,7 @@ async fn op_database_cleanup(
     args: Value,
 ) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let client = pool
         .get(&instance)
         .await
@@ -555,6 +634,7 @@ async fn op_deep_cleanup(
     args: Value,
 ) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let client = pool
         .get(&instance)
         .await
@@ -659,6 +739,7 @@ async fn op_default_get(
 
 async fn op_copy(pool: &OdooClientPool, op: &OpSpec, args: Value) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let id = opt_i64(&args, op, "id")?
         .ok_or_else(|| OdooError::InvalidResponse("Missing required argument 'id'".to_string()))?;
@@ -790,6 +871,7 @@ async fn op_create_batch(
     args: Value,
 ) -> Result<Value, OdooError> {
     let instance = req_str(&args, op, "instance")?;
+    pool.check_write_allowed(&instance)?;
     let model = req_str(&args, op, "model")?;
     let values_array = req_value(&args, op, "values")?;
     let context = opt_value(&args, op, "context");
@@ -1401,5 +1483,80 @@ mod tests {
 
         let result = ptr(&args, &op, "key");
         assert_eq!(result, Some(&json!("b")));
+    }
+
+    #[test]
+    fn test_report_size_enforcement() {
+        assert!(enforce_report_size(1024, 2048).is_ok());
+        assert!(enforce_report_size(2048, 2048).is_ok());
+        let err = enforce_report_size(2049, 2048).unwrap_err();
+        assert!(err.to_string().contains("Report response exceeds"));
+    }
+
+    #[test]
+    fn test_is_mutating_op() {
+        assert!(is_mutating_op("create"));
+        assert!(is_mutating_op("write"));
+        assert!(is_mutating_op("unlink"));
+        assert!(is_mutating_op("execute"));
+        assert!(is_mutating_op("workflow_action"));
+        assert!(is_mutating_op("copy"));
+        assert!(is_mutating_op("create_batch"));
+        assert!(is_mutating_op("database_cleanup"));
+        assert!(is_mutating_op("deep_cleanup"));
+
+        assert!(!is_mutating_op("search"));
+        assert!(!is_mutating_op("read"));
+        assert!(!is_mutating_op("search_read"));
+        assert!(!is_mutating_op("search_count"));
+        assert!(!is_mutating_op("generate_report"));
+        assert!(!is_mutating_op("get_model_metadata"));
+    }
+
+    #[test]
+    fn test_instance_read_only_guard() {
+        use crate::odoo::config::OdooInstanceConfig;
+        let mut instances = HashMap::new();
+        instances.insert(
+            "prod".to_string(),
+            OdooInstanceConfig {
+                url: "https://example.com".to_string(),
+                db: Some("prod".to_string()),
+                username: Some("admin".to_string()),
+                password: None,
+                api_key: Some("key".to_string()),
+                version: None,
+                timeout_ms: None,
+                max_retries: None,
+                read_only: true,
+                extra: HashMap::new(),
+            },
+        );
+        instances.insert(
+            "dev".to_string(),
+            OdooInstanceConfig {
+                url: "https://example.com".to_string(),
+                db: Some("dev".to_string()),
+                username: Some("admin".to_string()),
+                password: None,
+                api_key: Some("key".to_string()),
+                version: None,
+                timeout_ms: None,
+                max_retries: None,
+                read_only: false,
+                extra: HashMap::new(),
+            },
+        );
+
+        let env_cfg = OdooEnvConfig { instances };
+        let pool = OdooClientPool::from_config(env_cfg);
+
+        assert!(pool.is_read_only("prod"));
+        assert!(!pool.is_read_only("dev"));
+        assert!(!pool.is_read_only("unknown"));
+
+        let err = pool.check_write_allowed("prod").unwrap_err();
+        assert!(err.to_string().contains("read-only"));
+        assert!(pool.check_write_allowed("dev").is_ok());
     }
 }

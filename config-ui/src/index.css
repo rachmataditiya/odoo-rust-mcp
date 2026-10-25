@@ -2,42 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+:root {
+  --color-base: #fcfcfc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f0f2;
+  --color-surface-3: #e2e8f0;
+
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+
+  --color-fg: #22272a;
+  --color-muted: #64748b;
+  --color-faint: #94a3b8;
+
+  --color-primary: #3d8bff;
+  --color-primary-hover: #2476f2;
+  --color-accent: #ea580c;
+  --color-accent-hover: #c2410c;
+
+  --color-ok: #16a34a;
+  --color-warn: #ea580c;
+  --color-down: #dc2626;
+}
+
+:root.dark {
+  --color-base: #111827;
+  --color-surface: #171e2d;
+  --color-surface-2: #1f2937;
+  --color-surface-3: #374151;
+  --color-line: #374151;
+  --color-line-strong: #4b5563;
+  --color-fg: #f1f5f9;
+  --color-muted: #94a3b8;
+  --color-faint: #64748b;
+  --color-primary: #3d8bff;
+  --color-primary-hover: #4a9eff;
+  --color-accent: #f97316;
+  --color-accent-hover: #fb923c;
+  --color-ok: #4ade80;
+  --color-warn: #f97316;
+  --color-down: #f87171;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --color-base: #111827;
+    --color-surface: #171e2d;
+    --color-surface-2: #1f2937;
+    --color-surface-3: #374151;
+    --color-line: #374151;
+    --color-line-strong: #4b5563;
+    --color-fg: #f1f5f9;
+    --color-muted: #94a3b8;
+    --color-faint: #64748b;
+    --color-primary: #3d8bff;
+    --color-primary-hover: #4a9eff;
+    --color-accent: #f97316;
+    --color-accent-hover: #fb923c;
+    --color-ok: #4ade80;
+    --color-warn: #f97316;
+    --color-down: #f87171;
   }
 }
 
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-base);
+    color: var(--color-fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  a[href] {
+    cursor: pointer;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* JSON Editor Styling */
 .json-editor-container .jsoneditor {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-line);
   border-radius: 0.5rem;
+  background-color: var(--color-surface);
 }
 
 .json-editor-container .jsoneditor-menu {
-  background-color: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background-color: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-line);
   border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .json-editor-container .jsoneditor-menu button {
-  color: #374151;
+  color: var(--color-fg);
 }
 
 .json-editor-container .jsoneditor-menu button:hover {
-  background-color: #e5e7eb;
+  background-color: var(--color-surface-3);
 }
 
 .json-editor-container .jsoneditor-mode-code,
 .json-editor-container .jsoneditor-mode-tree {
-  background-color: white;
+  background-color: var(--color-surface);
+  color: var(--color-fg);
 }
 
 .json-editor-container .ace-jsoneditor {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   font-size: 13px;
 }
 

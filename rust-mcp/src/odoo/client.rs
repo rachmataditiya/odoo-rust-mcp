@@ -590,6 +590,7 @@ mod tests {
             version: Some("19".to_string()),
             timeout_ms: Some(5000),
             max_retries: Some(2),
+            read_only: false,
             extra: HashMap::new(),
         }
     }
@@ -643,6 +644,7 @@ mod tests {
             version: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         let client = OdooHttpClient::new(&cfg).unwrap();
@@ -667,6 +669,7 @@ mod tests {
             version: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         let client = OdooHttpClient::new(&cfg).unwrap();

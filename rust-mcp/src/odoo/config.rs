@@ -33,6 +33,9 @@ pub struct OdooInstanceConfig {
     pub timeout_ms: Option<u64>,
     #[serde(default)]
     pub max_retries: Option<usize>,
+    /// Read-only instance: disallow mutating operations (create, write, unlink, etc.)
+    #[serde(default, rename = "readOnly")]
+    pub read_only: bool,
 
     // Allow extra fields in ODOO_INSTANCES JSON.
     #[serde(flatten, default)]
@@ -170,6 +173,9 @@ pub fn load_odoo_env() -> anyhow::Result<OdooEnvConfig> {
                     max_retries: std::env::var("ODOO_MAX_RETRIES")
                         .ok()
                         .and_then(|v| v.parse().ok()),
+                    read_only: std::env::var("ODOO_READ_ONLY")
+                        .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+                        .unwrap_or(false),
                     extra: HashMap::new(),
                 },
             );
@@ -313,6 +319,7 @@ mod tests {
             version: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         assert_eq!(config.auth_mode(), OdooAuthMode::ApiKey);
@@ -329,6 +336,7 @@ mod tests {
             version: Some("18".to_string()),
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         assert_eq!(config.auth_mode(), OdooAuthMode::Password);
@@ -345,6 +353,7 @@ mod tests {
             version: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         assert_eq!(config.auth_mode(), OdooAuthMode::Password);
@@ -361,9 +370,23 @@ mod tests {
             version: Some("19".to_string()),
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         assert_eq!(config.auth_mode(), OdooAuthMode::ApiKey);
+    }
+
+    #[test]
+    fn test_instance_config_read_only_deserialize() {
+        let json = r#"{
+            "url": "http://localhost:8069",
+            "db": "prod_db",
+            "apiKey": "test-key",
+            "readOnly": true
+        }"#;
+        let config: OdooInstanceConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.url, "http://localhost:8069");
+        assert!(config.read_only);
     }
 
     #[test]

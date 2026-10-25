@@ -69,7 +69,7 @@ describe('Component Type Definitions', () => {
           apiKey: 'key123',
         },
         existingNames: ['existing1', 'existing2'],
-        onSave: (name: string, data: any) => {},
+        onSave: (_name: string, _data: any) => {},
         onCancel: () => {},
       };
       expect(formProps.instanceName).toBe('test-instance');
@@ -101,7 +101,7 @@ describe('Component Type Definitions', () => {
     });
 
     it('should handle tools without guards', () => {
-      const tool = {
+      const tool: { name: string; description: string; guards?: any } = {
         name: 'simple_tool',
         description: 'Simple tool without guards',
       };
@@ -110,7 +110,7 @@ describe('Component Type Definitions', () => {
 
     it('should toggle guard values', () => {
       const guards = { requiresEnvTrue: 'ENABLE_FEATURE' };
-      const newGuards = { ...guards };
+      const newGuards: { requiresEnvTrue?: string } = { ...guards };
       expect(newGuards.requiresEnvTrue).toBe('ENABLE_FEATURE');
       delete newGuards.requiresEnvTrue;
       expect(Object.keys(newGuards).length).toBe(0);
@@ -125,8 +125,8 @@ describe('Component Type Definitions', () => {
     });
 
     it('should handle tab changes', () => {
-      let activeTab = 'instances' as const;
-      const handleTabChange = (tab: typeof activeTab) => {
+      let activeTab: string = 'instances';
+      const handleTabChange = (tab: string) => {
         activeTab = tab;
       };
       handleTabChange('tools');
@@ -193,7 +193,7 @@ describe('Component Type Definitions', () => {
     it('should accept JSON editor configuration', () => {
       const editorProps = {
         value: { test: 'data' },
-        onChange: (value: any) => {},
+        onChange: (_value: any) => {},
         readOnly: false,
         mode: 'text' as const,
       };

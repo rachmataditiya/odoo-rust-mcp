@@ -1,24 +1,13 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Search } from 'lucide-react';
+import { RefreshCw, Search, CheckCheck, XCircle } from 'lucide-react';
 import { useConfig } from '../../hooks/useConfig';
-import { Card } from '../Card';
 import { Button } from '../Button';
+import { TextField } from '../TextField';
+import { Segmented } from '../Segmented';
 import { StatusMessage } from '../StatusMessage';
 import { ToolDetail } from '../ToolDetail';
+import { PageHeader } from '../PageHeader';
 import type { ToolConfig } from '../../types';
-
-const AVAILABLE_GUARDS = [
-  {
-    key: 'requiresEnvTrue',
-    value: 'ODOO_ENABLE_WRITE_TOOLS',
-    label: 'Require Write Tools Enabled',
-  },
-  {
-    key: 'requiresEnvTrue',
-    value: 'ODOO_ENABLE_CLEANUP_TOOLS',
-    label: 'Require Cleanup Tools Enabled',
-  },
-];
 
 export function ToolsTab() {
   const { load, save, status, loading } = useConfig('tools');
@@ -32,7 +21,7 @@ export function ToolsTab() {
 
   const loadTools = async () => {
     try {
-      const data = await load() as ToolConfig[];
+      const data = (await load()) as ToolConfig[];
       setEditedTools(data);
     } catch (error) {
       console.error('Failed to load tools:', error);
@@ -53,17 +42,17 @@ export function ToolsTab() {
   };
 
   const toggleTool = async (toolName: string, enabled: boolean) => {
-    const updatedTools = editedTools.map(tool => {
+    const updatedTools = editedTools.map((tool) => {
       if (tool.name === toolName) {
         const newTool = { ...tool };
         if (!enabled) {
           newTool.guards = {
             ...newTool.guards,
-            requiresEnvTrue: `ENABLE_${toolName.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`
+            requiresEnvTrue: `ENABLE_${toolName.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`,
           };
         } else {
           if (newTool.guards?.requiresEnvTrue) {
-            const { requiresEnvTrue, ...restGuards } = newTool.guards;
+            const { requiresEnvTrue: _, ...restGuards } = newTool.guards;
             if (Object.keys(restGuards).length === 0) {
               delete newTool.guards;
             } else {
@@ -80,16 +69,16 @@ export function ToolsTab() {
   };
 
   const toggleAll = async (enabled: boolean) => {
-    const updatedTools = editedTools.map(tool => {
+    const updatedTools = editedTools.map((tool) => {
       const newTool = { ...tool };
       if (!enabled) {
         newTool.guards = {
           ...newTool.guards,
-          requiresEnvTrue: `ENABLE_${tool.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`
+          requiresEnvTrue: `ENABLE_${tool.name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`,
         };
       } else {
         if (newTool.guards?.requiresEnvTrue) {
-          const { requiresEnvTrue, ...restGuards } = newTool.guards;
+          const { requiresEnvTrue: _, ...restGuards } = newTool.guards;
           if (Object.keys(restGuards).length === 0) {
             delete newTool.guards;
           } else {
@@ -103,65 +92,56 @@ export function ToolsTab() {
     await autoSave(updatedTools);
   };
 
-  const toggleGuard = async (toolName: string, guardKey: string, enabled: boolean) => {
-    const updatedTools = editedTools.map(tool => {
-      if (tool.name === toolName) {
-        const newTool = { ...tool };
-
-        if (enabled) {
-          const guard = AVAILABLE_GUARDS.find(g => g.key === guardKey);
-          if (guard) {
-            newTool.guards = {
-              ...newTool.guards,
-              [guardKey]: guard.value,
-            };
-          }
-        } else {
-          if (newTool.guards) {
-            const newGuards = { ...newTool.guards };
-            delete newGuards[guardKey as keyof typeof newGuards];
-
-            if (Object.keys(newGuards).length === 0) {
-              delete newTool.guards;
-            } else {
-              newTool.guards = newGuards;
-            }
-          }
-        }
-
-        return newTool;
-      }
-      return tool;
-    });
-    setEditedTools(updatedTools);
-    await autoSave(updatedTools);
-  };
-
-  const filteredTools = editedTools.filter(tool => {
-    const matchesSearch = !searchQuery ||
+  const filteredTools = editedTools.filter((tool) => {
+    const matchesSearch =
       tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (tool.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      (tool.description && tool.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!matchesSearch) return false;
 
     const enabled = isToolEnabled(tool);
-    const matchesFilter =
-      filterType === 'all' ||
-      (filterType === 'enabled' && enabled) ||
-      (filterType === 'disabled' && !enabled);
-
-    return matchesSearch && matchesFilter;
+    if (filterType === 'enabled') return enabled;
+    if (filterType === 'disabled') return !enabled;
+    return true;
   });
 
-  const enabledCount = editedTools.filter(t => isToolEnabled(t)).length;
+  const enabledCount = editedTools.filter(isToolEnabled).length;
   const disabledCount = editedTools.length - enabledCount;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">MCP Tools</h2>
-        <p className="mt-2 text-gray-600">
-          View and manage available Odoo MCP tools. Toggle individual tools to enable or disable them.
-        </p>
-      </div>
+      <PageHeader
+        title="MCP Tools"
+        description="Enable or disable specific Odoo operations exposed to AI assistants."
+      >
+        <Button
+          onClick={() => toggleAll(true)}
+          variant="plain"
+          size="sm"
+          icon={<CheckCheck size={14} className="text-ok" />}
+          disabled={loading || enabledCount === editedTools.length}
+        >
+          Enable All
+        </Button>
+        <Button
+          onClick={() => toggleAll(false)}
+          variant="plain"
+          size="sm"
+          icon={<XCircle size={14} className="text-down" />}
+          disabled={loading || disabledCount === editedTools.length}
+        >
+          Disable All
+        </Button>
+        <Button
+          onClick={loadTools}
+          variant="plain"
+          size="sm"
+          icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
+          disabled={loading}
+        >
+          Reload
+        </Button>
+      </PageHeader>
 
       {status && (
         <StatusMessage
@@ -170,133 +150,42 @@ export function ToolsTab() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Total Tools</p>
-            <p className="text-3xl font-bold text-gray-900">{editedTools.length}</p>
-          </div>
-        </Card>
+      {/* Search and Filters Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex-1 sm:max-w-xs">
+          <TextField
+            placeholder="Search tools by name or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            icon={<Search size={14} />}
+          />
+        </div>
 
-        <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Enabled</p>
-            <p className="text-3xl font-bold text-green-600">{enabledCount}</p>
-          </div>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Disabled</p>
-            <p className="text-3xl font-bold text-gray-500">{disabledCount}</p>
-          </div>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-white border-orange-200">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">With Guards</p>
-            <p className="text-3xl font-bold text-orange-600">
-              {editedTools.filter(t => t.guards && Object.keys(t.guards).length > 0).length}
-            </p>
-          </div>
-        </Card>
+        <Segmented<'all' | 'enabled' | 'disabled'>
+          options={[
+            { label: `All (${editedTools.length})`, value: 'all' },
+            { label: `Enabled (${enabledCount})`, value: 'enabled' },
+            { label: `Disabled (${disabledCount})`, value: 'disabled' },
+          ]}
+          value={filterType}
+          onChange={(val) => setFilterType(val)}
+          className="sm:w-80"
+        />
       </div>
 
-      <Card>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search tools by name or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                filterType === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilterType('enabled')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                filterType === 'enabled'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Enabled
-            </button>
-            <button
-              onClick={() => setFilterType('disabled')}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                filterType === 'disabled'
-                  ? 'bg-gray-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Disabled
-            </button>
-          </div>
-        </div>
-      </Card>
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Showing {filteredTools.length} of {editedTools.length} tools
-        </p>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => toggleAll(true)}
-            variant="secondary"
-            size="sm"
-          >
-            Enable All
-          </Button>
-          <Button
-            onClick={() => toggleAll(false)}
-            variant="secondary"
-            size="sm"
-          >
-            Disable All
-          </Button>
-          <Button
-            onClick={loadTools}
-            loading={loading}
-            icon={<RefreshCw size={14} />}
-            variant="secondary"
-            size="sm"
-          >
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-3">
+      {/* Tools List */}
+      <div className="space-y-2.5">
         {filteredTools.length === 0 ? (
-          <Card>
-            <div className="text-center py-8">
-              <p className="text-gray-500">No tools found matching your criteria</p>
-            </div>
-          </Card>
+          <div className="rounded-xl border border-dashed border-line bg-surface/50 p-10 text-center text-muted text-[13px]">
+            No tools found matching your current filter criteria.
+          </div>
         ) : (
-          filteredTools.map(tool => (
+          filteredTools.map((tool) => (
             <ToolDetail
               key={tool.name}
               tool={tool}
               enabled={isToolEnabled(tool)}
-              onToggle={async (enabled) => await toggleTool(tool.name, enabled)}
-              onToggleGuard={async (guardKey, enabled) => await toggleGuard(tool.name, guardKey, enabled)}
-              availableGuards={AVAILABLE_GUARDS}
+              onToggle={(enabled) => toggleTool(tool.name, enabled)}
             />
           ))
         )}

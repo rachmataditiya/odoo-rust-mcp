@@ -15,6 +15,7 @@ mod tests {
             version: Some("19".to_string()),
             timeout_ms: Some(30_000),
             max_retries: Some(3),
+            read_only: false,
             extra: HashMap::new(),
         };
 
@@ -36,6 +37,7 @@ mod tests {
             version: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
 
@@ -59,6 +61,7 @@ mod tests {
                 version: Some("19".to_string()),
                 timeout_ms: Some(30_000),
                 max_retries: Some(5),
+                read_only: false,
                 extra: HashMap::new(),
             },
         );
@@ -85,6 +88,7 @@ mod tests {
                 version: Some("19".to_string()),
                 timeout_ms: Some(20_000),
                 max_retries: Some(2),
+                read_only: false,
                 extra: HashMap::new(),
             },
         );
@@ -100,6 +104,7 @@ mod tests {
                 version: Some("19".to_string()),
                 timeout_ms: Some(25_000),
                 max_retries: Some(3),
+                read_only: false,
                 extra: HashMap::new(),
             },
         );
@@ -121,6 +126,7 @@ mod tests {
             db: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
 
@@ -138,6 +144,7 @@ mod tests {
             db: None,
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
 

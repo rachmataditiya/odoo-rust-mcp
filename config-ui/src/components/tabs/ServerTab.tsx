@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Save, RefreshCw, Info, Plus, Trash2 } from 'lucide-react';
+import { Save, RefreshCw, Plus, Trash2, ShieldCheck, Terminal, Cpu } from 'lucide-react';
 import { useConfig } from '../../hooks/useConfig';
 import { Card } from '../Card';
 import { Button } from '../Button';
+import { Field } from '../Field';
+import { TextField } from '../TextField';
 import { StatusMessage } from '../StatusMessage';
+import { PageHeader } from '../PageHeader';
 import type { ServerConfig } from '../../types';
 
 export function ServerTab() {
@@ -19,7 +22,7 @@ export function ServerTab() {
 
   const loadServer = async () => {
     try {
-      const data = await load() as ServerConfig;
+      const data = (await load()) as ServerConfig;
       setServerName(data.serverName || '');
       setInstructions(data.instructions || '');
       setProtocolVersionDefault(data.protocolVersionDefault || '');
@@ -39,7 +42,8 @@ export function ServerTab() {
 
       if (serverName.trim()) config.serverName = serverName.trim();
       if (instructions.trim()) config.instructions = instructions.trim();
-      if (protocolVersionDefault.trim()) config.protocolVersionDefault = protocolVersionDefault.trim();
+      if (protocolVersionDefault.trim())
+        config.protocolVersionDefault = protocolVersionDefault.trim();
 
       customFields.forEach(({ key, value }) => {
         if (key.trim()) {
@@ -70,12 +74,30 @@ export function ServerTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">Server Configuration</h2>
-        <p className="mt-2 text-gray-600">
-          Configure server metadata and system settings for the MCP server.
-        </p>
-      </div>
+      <PageHeader
+        title="Server Configuration"
+        description="Manage server identity, AI prompt guidance, and protocol settings."
+      >
+        <Button
+          onClick={loadServer}
+          variant="plain"
+          size="md"
+          icon={<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />}
+          disabled={loading}
+        >
+          Reload
+        </Button>
+        <Button
+          onClick={handleSave}
+          variant="primary"
+          size="md"
+          icon={<Save size={14} />}
+          disabled={loading}
+          loading={loading}
+        >
+          Save Changes
+        </Button>
+      </PageHeader>
 
       {status && (
         <StatusMessage
@@ -85,165 +107,171 @@ export function ServerTab() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card title="Server Settings">
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="serverName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Server Name
-                </label>
-                <input
-                  type="text"
-                  id="serverName"
-                  value={serverName}
-                  onChange={(e) => setServerName(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="e.g., Odoo MCP Server"
-                />
-                <p className="text-xs text-gray-500 mt-1">Display name shown to MCP clients</p>
-              </div>
+        <div className="lg:col-span-2 space-y-6">
+          {/* General Server Settings */}
+          <Card
+            title="Server Identity"
+            description="Core identifiers announced to Model Context Protocol clients"
+            divided
+          >
+            <Field
+              label="Server Name"
+              help="Identifier transmitted to clients during MCP protocol initialization."
+              htmlFor="serverName"
+            >
+              <TextField
+                id="serverName"
+                value={serverName}
+                onChange={(e) => setServerName(e.target.value)}
+                placeholder="e.g. odoo-mcp-server"
+                containerClassName="sm:w-72"
+              />
+            </Field>
 
-              <div>
-                <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2">
-                  Instructions
-                </label>
-                <textarea
-                  id="instructions"
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                  rows={6}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono text-sm"
-                  placeholder="System instructions for the AI assistant..."
-                />
-                <p className="text-xs text-gray-500 mt-1">System instructions for the AI assistant</p>
-              </div>
+            <Field
+              label="Default Protocol Version"
+              help="MCP wire protocol version advertised to connecting clients."
+              htmlFor="protocolVersionDefault"
+            >
+              <TextField
+                id="protocolVersionDefault"
+                value={protocolVersionDefault}
+                onChange={(e) => setProtocolVersionDefault(e.target.value)}
+                placeholder="e.g. 2024-11-05"
+                mono
+                containerClassName="sm:w-72"
+              />
+            </Field>
+          </Card>
 
-              <div>
-                <label htmlFor="protocolVersion" className="block text-sm font-medium text-gray-700 mb-2">
-                  Protocol Version Default
-                </label>
-                <input
-                  type="text"
-                  id="protocolVersion"
-                  value={protocolVersionDefault}
-                  onChange={(e) => setProtocolVersionDefault(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono"
-                  placeholder="e.g., 2024-11-05"
-                />
-                <p className="text-xs text-gray-500 mt-1">Default MCP protocol version</p>
-              </div>
+          {/* AI System Instructions */}
+          <Card
+            title="System Instructions"
+            description="Guidance injected into the AI model when utilizing this MCP server."
+          >
+            <div className="space-y-2">
+              <label
+                htmlFor="instructions"
+                className="block text-[13px] font-medium text-fg"
+              >
+                MCP Prompt Instructions
+              </label>
+              <textarea
+                id="instructions"
+                rows={5}
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Enter instructions for AI models interacting with Odoo (e.g., prefer search_read with active=True, verify record state before confirming)..."
+                className="w-full rounded-md border border-line bg-surface-2 p-3 text-[13px] text-fg transition-colors outline-none placeholder:text-faint hover:border-line-strong focus:border-primary focus:ring-1 focus:ring-primary font-mono leading-relaxed"
+              />
+              <p className="text-[12px] text-muted">
+                Tip: Specific constraints on database IDs, safety checks, or common model names help Claude and Cursor query Odoo accurately.
+              </p>
+            </div>
+          </Card>
 
-              {customFields.length > 0 && (
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Custom Fields</h4>
-                  <div className="space-y-3">
-                    {customFields.map((field, index) => (
-                      <div key={index} className="flex gap-2">
-                        <input
-                          type="text"
-                          value={field.key}
-                          onChange={(e) => updateCustomField(index, 'key', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                          placeholder="Field name"
-                        />
-                        <input
-                          type="text"
-                          value={field.value}
-                          onChange={(e) => updateCustomField(index, 'value', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                          placeholder="Value"
-                        />
-                        <button
-                          onClick={() => removeCustomField(index)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Remove field"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+          {/* Custom Properties */}
+          <Card
+            title="Custom Properties"
+            description="Arbitrary additional key-value configurations stored in server.json."
+            aside={
               <Button
                 onClick={addCustomField}
-                icon={<Plus size={16} />}
-                variant="secondary"
-                className="w-full"
+                variant="plain"
+                size="sm"
+                icon={<Plus size={13} />}
               >
-                Add Custom Field
+                Add Field
               </Button>
-
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <Button
-                  onClick={handleSave}
-                  loading={loading}
-                  icon={<Save size={16} />}
-                  variant="primary"
-                >
-                  Save Configuration
-                </Button>
-                <Button
-                  onClick={loadServer}
-                  loading={loading}
-                  icon={<RefreshCw size={16} />}
-                  variant="secondary"
-                >
-                  Refresh
-                </Button>
+            }
+          >
+            {customFields.length === 0 ? (
+              <div className="py-8 text-center text-[13px] text-muted">
+                No custom fields configured. Click "Add Field" to define custom parameters.
               </div>
-            </div>
+            ) : (
+              <div className="divide-y divide-line">
+                {customFields.map((field, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 py-3"
+                  >
+                    <TextField
+                      placeholder="Property Key"
+                      value={field.key}
+                      onChange={(e) => updateCustomField(index, 'key', e.target.value)}
+                      mono
+                      containerClassName="sm:w-1/3"
+                    />
+                    <TextField
+                      placeholder="Property Value"
+                      value={field.value}
+                      onChange={(e) => updateCustomField(index, 'value', e.target.value)}
+                      containerClassName="flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCustomField(index)}
+                      className="grid h-8 w-8 place-items-center rounded-md border border-line bg-surface-2 text-muted hover:text-down hover:border-down transition-colors shrink-0"
+                      title="Remove field"
+                      aria-label="Remove field"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 
-        <div>
-          <Card title="Configuration Reference">
-            <div className="space-y-4">
-              <div className="flex items-start gap-2">
-                <Info size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+        {/* Right Info Column */}
+        <div className="space-y-6">
+          <Card title="Transport Overview" description="Active communications layer">
+            <div className="space-y-3.5 text-[13px]">
+              <div className="flex items-start gap-2.5">
+                <Terminal size={16} className="text-primary mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Standard Fields</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Common server configuration options
-                  </p>
+                  <div className="font-medium text-fg">Stdio Transport</div>
+                  <div className="text-[12px] text-muted mt-0.5">
+                    Standard input/output for local Cursor and Claude Desktop integrations.
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3 text-sm">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <code className="text-blue-600 font-mono text-xs">serverName</code>
-                  <p className="text-gray-600 mt-1 text-xs">
-                    Display name shown to MCP clients
-                  </p>
-                </div>
-
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <code className="text-blue-600 font-mono text-xs">instructions</code>
-                  <p className="text-gray-600 mt-1 text-xs">
-                    System instructions for the AI assistant
-                  </p>
-                </div>
-
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <code className="text-blue-600 font-mono text-xs">protocolVersionDefault</code>
-                  <p className="text-gray-600 mt-1 text-xs">
-                    Default MCP protocol version (e.g., "2024-11-05")
-                  </p>
+              <div className="flex items-start gap-2.5">
+                <Cpu size={16} className="text-primary mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-medium text-fg">HTTP & Streamable SSE</div>
+                  <div className="text-[12px] text-muted mt-0.5">
+                    Remote daemon mode on port 3008 with Web UI and config hot-reloading.
+                  </div>
                 </div>
               </div>
 
-              {serverName && (
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 mb-2">Current Server</p>
-                  <p className="font-semibold text-gray-900">{serverName}</p>
-                  {protocolVersionDefault && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Protocol: {protocolVersionDefault}
-                    </p>
-                  )}
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck size={16} className="text-ok mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-medium text-fg">Atomic Hot Reload</div>
+                  <div className="text-[12px] text-muted mt-0.5">
+                    Changes saved here sync without restarting client sessions or daemon processes.
+                  </div>
                 </div>
-              )}
+              </div>
+            </div>
+          </Card>
+
+          <Card title="Peugeot 3008 Edition" description="Design & Performance">
+            <div className="space-y-2 text-[12px] text-muted leading-relaxed">
+              <p>
+                Inspired by the sharp geometry and high-performance cockpit of the Peugeot 3008,
+                this MCP server provides dual-engine Odoo connectivity:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-fg/90">
+                <li><strong className="text-primary">JSON-2 API:</strong> Native for Odoo 19+ with API key tokens.</li>
+                <li><strong className="text-primary">JSON-RPC:</strong> Full compatibility for Odoo 14–18.</li>
+                <li><strong className="text-primary">Metadata Cache:</strong> High-speed TTL cache for field structures.</li>
+              </ul>
             </div>
           </Card>
         </div>

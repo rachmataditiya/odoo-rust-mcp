@@ -1,8 +1,8 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'plain';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -18,19 +18,21 @@ export function Button({
   className = '',
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles =
+    'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-45';
 
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm hover:shadow',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
-    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow',
+    primary: 'bg-primary text-white hover:bg-primary-hover shadow-sm',
+    secondary: 'border border-line bg-surface-2 text-muted hover:bg-surface-3 hover:text-fg',
+    plain: 'border border-line bg-surface-2 text-muted hover:bg-surface-3 hover:text-fg',
+    ghost: 'text-muted hover:bg-surface-2 hover:text-fg',
+    danger: 'border border-line bg-surface-2 text-down hover:border-down hover:bg-down hover:text-white',
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm gap-1.5',
-    md: 'px-4 py-2 text-base gap-2',
-    lg: 'px-6 py-3 text-lg gap-2.5',
+    sm: 'px-2.5 py-1 text-[12px] gap-1.5',
+    md: 'px-3 py-1.5 text-[13px] gap-2',
+    lg: 'px-4 py-2.5 text-sm gap-2.5',
   };
 
   return (
@@ -40,10 +42,10 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <Loader2 className="animate-spin" size={size === 'sm' ? 14 : size === 'lg' ? 20 : 16} />
-      ) : icon ? (
+        <Loader2 className="animate-spin" size={size === 'sm' ? 13 : size === 'lg' ? 18 : 15} />
+      ) : (
         icon
-      ) : null}
+      )}
       {children}
     </button>
   );

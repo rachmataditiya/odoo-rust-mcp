@@ -20,6 +20,7 @@ fn create_config(url: &str) -> OdooInstanceConfig {
         version: Some("19".to_string()),
         timeout_ms: Some(5000),
         max_retries: Some(3),
+        read_only: false,
         extra: HashMap::new(),
     }
 }

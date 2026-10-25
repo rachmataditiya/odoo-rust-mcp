@@ -599,6 +599,7 @@ mod tests {
             version: Some("19".to_string()),
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         assert_eq!(modern_cfg.auth_mode(), OdooAuthMode::ApiKey);
@@ -613,6 +614,7 @@ mod tests {
             version: Some("18".to_string()),
             timeout_ms: None,
             max_retries: None,
+            read_only: false,
             extra: HashMap::new(),
         };
         assert_eq!(legacy_cfg.auth_mode(), OdooAuthMode::Password);
