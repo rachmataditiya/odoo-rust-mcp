@@ -1,7 +1,7 @@
 class RustMcp < Formula
   desc "Odoo MCP Server - Model Context Protocol server for Odoo integration"
   homepage "https://github.com/rachmataditiya/odoo-rust-mcp"
-  version "0.3.32"
+  version "0.3.33"
   license "MIT"
 
   on_macos do
