@@ -1,0 +1,5 @@
+Component: main
+Origin: Odoo Rust MCP
+Label: odoo-rust-mcp
+Architecture: arm64
+Description: APT repository for Odoo Rust MCP Server

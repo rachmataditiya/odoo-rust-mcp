@@ -1,0 +1,28 @@
+Origin: Odoo Rust MCP
+Label: odoo-rust-mcp
+Codename: stable
+Date: Sun, 25 Oct 2026 07:05:02 UTC
+Architectures: amd64 arm64
+Components: main
+Description: APT repository for Odoo Rust MCP Server
+MD5Sum:
+ df1a9d8f67165c49fef006b54cd8170b 751 main/binary-amd64/Packages
+ 916615729a800b6a940945876fee1054 504 main/binary-amd64/Packages.gz
+ cfcf0bee737738610da24a8483099cd1 132 main/binary-amd64/Release
+ d41d8cd98f00b204e9800998ecf8427e 0 main/binary-arm64/Packages
+ 7029066c27ac6f5ef18d660d5741979a 20 main/binary-arm64/Packages.gz
+ 72fa144a73fe567d21bb79652b212131 132 main/binary-arm64/Release
+SHA1:
+ f752361f2dbed2a483ab73a3a081b4cfd4bcb4a1 751 main/binary-amd64/Packages
+ 1f23c0f082be346a802e554569b210a4883de760 504 main/binary-amd64/Packages.gz
+ 8d2a79c7a14853af25b428b031ef8d06669a552c 132 main/binary-amd64/Release
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 main/binary-arm64/Packages
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 main/binary-arm64/Packages.gz
+ 56aef17cbd6f29902dccfc53e61320d1dcd21491 132 main/binary-arm64/Release
+SHA256:
+ 621b00ce660af89efd62c35807521a8f08e5b9fd770fbf4702c418c3b39d1966 751 main/binary-amd64/Packages
+ c9b2d50453c0838d11a96e72d4ed62f311bc7e1d2a98542e0c84dcffb68f1765 504 main/binary-amd64/Packages.gz
+ b4c707cfcb6cc14ef08edea1d017c05dd9748c9bcbd796dfc2082aa3b0fdaeeb 132 main/binary-amd64/Release
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-arm64/Packages
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 main/binary-arm64/Packages.gz
+ 38820b7a605e76659b739a95ae7b5c58034d8c4b7f0e0c9a568bcfbc411e67bf 132 main/binary-arm64/Release
